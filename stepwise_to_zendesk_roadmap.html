@@ -1,0 +1,142 @@
+
+<style>
+  .phase { margin: 0 0 8px; }
+  .phase-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--border-radius-lg); cursor: default; }
+  .phase-label { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+  .phase-title { font-size: 15px; font-weight: 500; color: var(--color-text-primary); }
+  .phase-duration { font-size: 12px; color: var(--color-text-tertiary); margin-left: auto; white-space: nowrap; }
+  .tasks { padding: 4px 14px 10px 44px; display: flex; flex-direction: column; gap: 6px; }
+  .task { display: flex; align-items: flex-start; gap: 8px; }
+  .task-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+  .task-text { font-size: 13px; color: var(--color-text-secondary); line-height: 1.5; }
+  .task-note { font-size: 11px; color: var(--color-text-tertiary); margin-top: 1px; }
+  .divider { height: 1px; background: var(--color-border-tertiary); margin: 4px 0 12px; }
+  .goal-box { padding: 10px 14px; border-radius: var(--border-radius-lg); border: 1px solid var(--color-border-tertiary); margin-top: 4px; }
+  .goal-label { font-size: 11px; font-weight: 500; color: var(--color-text-tertiary); margin-bottom: 4px; }
+  .goal-text { font-size: 13px; color: var(--color-text-secondary); line-height: 1.5; }
+
+  .p1-bg { background: #EEEDFE; }
+  .p1-label { background: #AFA9EC; color: #26215C; }
+  .p1-dot { background: #7F77DD; }
+  @media (prefers-color-scheme: dark) {
+    .p1-bg { background: #26215C; }
+    .p1-label { background: #3C3489; color: #CECBF6; }
+    .p1-dot { background: #AFA9EC; }
+  }
+
+  .p2-bg { background: #E1F5EE; }
+  .p2-label { background: #5DCAA5; color: #04342C; }
+  .p2-dot { background: #1D9E75; }
+  @media (prefers-color-scheme: dark) {
+    .p2-bg { background: #04342C; }
+    .p2-label { background: #085041; color: #9FE1CB; }
+    .p2-dot { background: #5DCAA5; }
+  }
+
+  .p3-bg { background: #FAEEDA; }
+  .p3-label { background: #EF9F27; color: #412402; }
+  .p3-dot { background: #BA7517; }
+  @media (prefers-color-scheme: dark) {
+    .p3-bg { background: #412402; }
+    .p3-label { background: #633806; color: #FAC775; }
+    .p3-dot { background: #EF9F27; }
+  }
+
+  .p4-bg { background: #FAECE7; }
+  .p4-label { background: #F0997B; color: #4A1B0C; }
+  .p4-dot { background: #D85A30; }
+  @media (prefers-color-scheme: dark) {
+    .p4-bg { background: #4A1B0C; }
+    .p4-label { background: #712B13; color: #F5C4B3; }
+    .p4-dot { background: #F0997B; }
+  }
+</style>
+
+<div style="padding: 1rem 0">
+
+  <div class="phase">
+    <div class="phase-header p1-bg">
+      <span class="phase-label p1-label">Phase 1</span>
+      <span class="phase-title">Validate retrieval on real content</span>
+      <span class="phase-duration">1–2 days</span>
+    </div>
+    <div class="tasks">
+      <div class="task"><div class="task-dot p1-dot"></div><div><div class="task-text">Ingest 10–20 of your actual tutorial videos via YouTube URLs or Drive downloads</div></div></div>
+      <div class="task"><div class="task-dot p1-dot"></div><div><div class="task-text">Run your 20–30 most common Zendesk ticket types as queries</div><div class="task-note">Does the right video come back? Is the timestamp useful?</div></div></div>
+      <div class="task"><div class="task-dot p1-dot"></div><div><div class="task-text">Note where retrieval fails — wrong video, wrong segment, no result</div></div></div>
+    </div>
+    <div style="padding: 0 14px 8px 44px">
+      <div class="goal-box">
+        <div class="goal-label">Exit criteria</div>
+        <div class="goal-text">At least 70% of test queries return a relevant video + timestamp. If not, the embedding or chunking strategy needs work before building anything on top.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="phase">
+    <div class="phase-header p2-bg">
+      <span class="phase-label p2-label">Phase 2</span>
+      <span class="phase-title">Google Drive connector</span>
+      <span class="phase-duration">3–5 days</span>
+    </div>
+    <div class="tasks">
+      <div class="task"><div class="task-dot p2-dot"></div><div><div class="task-text">OAuth flow to connect a Drive folder</div></div></div>
+      <div class="task"><div class="task-dot p2-dot"></div><div><div class="task-text">Watch folder for video files — download, transcribe, ingest via existing pipeline</div></div></div>
+      <div class="task"><div class="task-dot p2-dot"></div><div><div class="task-text">Handle Loom links in Drive (transcript API vs Whisper fallback)</div></div></div>
+      <div class="task"><div class="task-dot p2-dot"></div><div><div class="task-text">Re-use existing idempotency — skip already-ingested files on re-scan</div></div></div>
+    </div>
+    <div style="padding: 0 14px 8px 44px">
+      <div class="goal-box">
+        <div class="goal-label">Exit criteria</div>
+        <div class="goal-text">Point it at your actual Drive folder, it ingests everything without manual steps.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="phase">
+    <div class="phase-header p3-bg">
+      <span class="phase-label p3-label">Phase 3</span>
+      <span class="phase-title">Zendesk sidebar app</span>
+      <span class="phase-duration">1–2 weeks</span>
+    </div>
+    <div class="tasks">
+      <div class="task"><div class="task-dot p3-dot"></div><div><div class="task-text">Zendesk Apps Framework (ZAF) sidebar — reads current ticket subject + body</div></div></div>
+      <div class="task"><div class="task-dot p3-dot"></div><div><div class="task-text">Queries your FastAPI backend, returns top 2–3 video results with timestamps</div></div></div>
+      <div class="task"><div class="task-dot p3-dot"></div><div><div class="task-text">One-click "insert link" drops a timestamped URL into the reply composer</div></div></div>
+      <div class="task"><div class="task-dot p3-dot"></div><div><div class="task-text">Deploy backend publicly (Railway or Fly.io) so the sidebar can reach it</div><div class="task-note">This is the only infrastructure work that blocks this phase</div></div></div>
+    </div>
+    <div style="padding: 0 14px 8px 44px">
+      <div class="goal-box">
+        <div class="goal-label">Exit criteria</div>
+        <div class="goal-text">A support agent can open a ticket and see relevant video suggestions without leaving Zendesk. You use it yourself on real tickets.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="phase">
+    <div class="phase-header p4-bg">
+      <span class="phase-label p4-label">Phase 4</span>
+      <span class="phase-title">Productise for other companies</span>
+      <span class="phase-duration">4–6 weeks</span>
+    </div>
+    <div class="tasks">
+      <div class="task"><div class="task-dot p4-dot"></div><div><div class="task-text">Auth + multi-tenancy — per-company namespacing in ChromaDB + SQLite</div></div></div>
+      <div class="task"><div class="task-dot p4-dot"></div><div><div class="task-text">Onboarding flow — connect Drive, connect Zendesk, ingest, done</div></div></div>
+      <div class="task"><div class="task-dot p4-dot"></div><div><div class="task-text">Stripe billing — seat-based or usage-based, your call</div></div></div>
+      <div class="task"><div class="task-dot p4-dot"></div><div><div class="task-text">Zendesk Marketplace listing</div><div class="task-note">Distribution channel you get for free — worth the submission effort</div></div></div>
+    </div>
+    <div style="padding: 0 14px 8px 44px">
+      <div class="goal-box">
+        <div class="goal-label">Exit criteria</div>
+        <div class="goal-text">A company you don't know can sign up, connect their Drive and Zendesk, and be querying their own video library within 10 minutes.</div>
+      </div>
+    </div>
+  </div>
+
+</div>

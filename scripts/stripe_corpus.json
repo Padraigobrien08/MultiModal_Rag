@@ -1,0 +1,70 @@
+{
+  "description": "Stripe tutorial video corpus for Phase 1 retrieval validation",
+  "videos": [
+    {
+      "url": "https://www.youtube.com/watch?v=4eN9by7m2eA",
+      "topic": "getting_started",
+      "notes": "Full Stripe tutorial for beginners - dashboard, payments, setup"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=ArD4oZDtL_0",
+      "topic": "account_setup",
+      "notes": "Step-by-step Stripe account creation and setup"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=Q6-jmzYF55A",
+      "topic": "payment_links",
+      "notes": "Setting up Stripe Payment Links"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=1l4NMj-NTUE",
+      "topic": "webhooks",
+      "notes": "Stripe Webhooks - The Ultimate Guide"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=x9cGa3oMJPc",
+      "topic": "webhooks",
+      "notes": "Stripe Webhooks tutorial"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=iUJ82_mVEVI",
+      "topic": "subscriptions",
+      "notes": "Stripe Checkout Subscriptions with Node.js"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=3v0ADH-xnrE",
+      "topic": "payouts",
+      "notes": "How to change payout schedule and settings in Stripe"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=J62rD-pvzck",
+      "topic": "payment_methods",
+      "notes": "How to change payment methods in Stripe"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=tr1ZUkAqpdM",
+      "topic": "getting_started",
+      "notes": "Stripe tutorial for beginners - accept payments online"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=lqRxtGOUQ2o",
+      "topic": "integration",
+      "notes": "How to integrate Stripe payments"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=sy8wDAHDo1s",
+      "topic": "refunds",
+      "notes": "How to issue refunds, manage transactions and track payouts in Stripe 2025"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=iLvkLGFvC8I",
+      "topic": "team_management",
+      "notes": "How to add team members, change roles, transfer ownership in Stripe"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=3uDmc9YOBOg",
+      "topic": "refunds",
+      "notes": "How to issue refunds on Stripe 2025 full guide"
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-sans);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  /* Base surfaces */
+  --background:        #09090c;
+  --foreground:        #ededed;
+  --card:              #111116;
+  --card-foreground:   #ededed;
+  --popover:           #111116;
+  --popover-foreground:#ededed;
+
+  /* Brand accent — phosphor green */
+  --primary:           #00ff88;
+  --primary-foreground:#030a05;
+
+  /* Secondary surfaces */
+  --secondary:         #1a1a22;
+  --secondary-foreground:#ededed;
+  --muted:             #161620;
+  --muted-foreground:  #6b6b80;
+  --accent:            #00ff88;
+  --accent-foreground: #030a05;
+
+  /* Semantic */
+  --destructive:       #ff4d4d;
+  --border:            rgba(255,255,255,0.07);
+  --input:             #1a1a22;
+  --ring:              rgba(0,255,136,0.4);
+  --radius:            0.5rem;
+
+  /* Sidebar */
+  --sidebar:           #0d0d12;
+  --sidebar-foreground:#ededed;
+  --sidebar-primary:   #00ff88;
+  --sidebar-primary-foreground:#030a05;
+  --sidebar-accent:    #1a1a22;
+  --sidebar-accent-foreground:#ededed;
+  --sidebar-border:    rgba(255,255,255,0.06);
+  --sidebar-ring:      rgba(0,255,136,0.4);
+}
+
+/* Animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+@keyframes pulseGreen {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,136,0); }
+  50%       { box-shadow: 0 0 0 4px rgba(0,255,136,0.15); }
+}
+
+@layer utilities {
+  .scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+  .animate-fade-up    { animation: fadeUp 0.35s ease both; }
+  .animate-fade-in    { animation: fadeIn 0.25s ease both; }
+  .animation-delay-100{ animation-delay: 0.1s; }
+  .animation-delay-200{ animation-delay: 0.2s; }
+  .animation-delay-300{ animation-delay: 0.3s; }
+
+  .skeleton {
+    background: linear-gradient(90deg, #1a1a22 25%, #22222e 50%, #1a1a22 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+  }
+
+  .glow-green {
+    box-shadow: 0 0 0 1px rgba(0,255,136,0.35),
+                0 0 16px rgba(0,255,136,0.12);
+  }
+  .glow-green-sm {
+    box-shadow: 0 0 0 1px rgba(0,255,136,0.25),
+                0 0 8px  rgba(0,255,136,0.08);
+  }
+  .card-hover {
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  }
+  .card-hover:hover {
+    border-color: rgba(0,255,136,0.25);
+    box-shadow: 0 0 0 1px rgba(0,255,136,0.1),
+                0 8px 32px rgba(0,0,0,0.4);
+    transform: translateY(-1px);
+  }
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body { @apply bg-background text-foreground; }
+}

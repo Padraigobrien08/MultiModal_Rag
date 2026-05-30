@@ -1,0 +1,24 @@
+{
+  "name": "Stepwise",
+  "author": {
+    "name": "Stepwise",
+    "email": "hello@stepwise.app"
+  },
+  "version": "0.1.0",
+  "frameworkVersion": "2.0",
+  "location": {
+    "support": {
+      "ticket_sidebar": "assets/iframe.html"
+    }
+  },
+  "parameters": [
+    {
+      "name": "api_url",
+      "type": "text",
+      "required": true,
+      "default": "https://your-stepwise-api.railway.app",
+      "secure": false
+    }
+  ],
+  "defaultLocale": "en"
+}

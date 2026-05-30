@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "stepwise"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.40.0",
+    "chromadb>=0.5.0",
+    "sqlalchemy>=2.0.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "yt-dlp>=2024.1.1",
+    "openai-whisper>=20231117",
+    "youtube-transcript-api>=0.6.0",
+    "opencv-python-headless>=4.9.0",
+    "pillow>=10.0.0",
+    "sentence-transformers>=3.0.0",
+    "numpy>=1.26.0",
+    "pydantic-settings>=2.0.0",
+    "python-multipart>=0.0.9",
+    "python-dotenv>=1.0.0",
+    "typer>=0.12.0",
+    "rich>=13.0.0",
+    "google-api-python-client>=2.100.0",
+    "google-auth-oauthlib>=1.1.0",
+    "google-auth-httplib2>=0.2.0",
+    "notion-client>=2.2.1",
+]
+
+[project.scripts]
+stepwise = "stepwise.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["stepwise"]

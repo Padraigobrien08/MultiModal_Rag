@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stepwise</title>
+  <script src="https://static.zdassets.com/zendesk_app_framework_sdk/2.0/zaf_sdk.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      color: #3f4042;
+      background: #fff;
+      padding: 12px;
+    }
+
+    /* ── Header ──────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .header-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #00b388;
+    }
+    .header-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1f2d3d;
+    }
+    .search-btn {
+      margin-left: auto;
+      padding: 4px 10px;
+      font-size: 12px;
+      background: #f3f4f6;
+      border: 1px solid #d8dcde;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #1f2d3d;
+    }
+    .search-btn:hover { background: #e9ebec; }
+
+    /* ── States ──────────────────────────────── */
+    .state {
+      display: none;
+      text-align: center;
+      padding: 20px 0;
+      color: #68737d;
+      font-size: 12px;
+    }
+    .state.active { display: block; }
+
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid #d8dcde;
+      border-top-color: #00b388;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Answer box ──────────────────────────── */
+    .answer-box {
+      background: #f8f9fa;
+      border: 1px solid #e9ebec;
+      border-left: 3px solid #00b388;
+      border-radius: 4px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #1f2d3d;
+      display: none;
+    }
+    .answer-box.active { display: block; }
+    .answer-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #00b388;
+      margin-bottom: 4px;
+    }
+
+    /* ── Result cards ────────────────────────── */
+    .results-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #68737d;
+      margin-bottom: 8px;
+    }
+    .card {
+      border: 1px solid #e9ebec;
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .card:hover {
+      border-color: #00b388;
+      box-shadow: 0 1px 4px rgba(0,179,136,0.15);
+    }
+    .card-tutorial {
+      font-size: 11px;
+      color: #68737d;
+      margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-text {
+      font-size: 12px;
+      color: #1f2d3d;
+      line-height: 1.45;
+      margin-bottom: 8px;
+    }
+    .card-footer {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .timestamp-badge {
+      font-size: 11px;
+      color: #68737d;
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-variant-numeric: tabular-nums;
+    }
+    .insert-btn {
+      margin-left: auto;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 500;
+      background: #00b388;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .insert-btn:hover { background: #009970; }
+    .insert-btn.copied {
+      background: #87929d;
+      cursor: default;
+    }
+
+    .no-results {
+      text-align: center;
+      padding: 16px 0;
+      color: #68737d;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-dot"></div>
+  <span class="header-title">Stepwise</span>
+  <button class="search-btn" id="refresh-btn">Search again</button>
+</div>
+
+<div class="state active" id="state-loading">
+  <div class="spinner"></div>
+  Finding relevant tutorials…
+</div>
+
+<div class="state" id="state-error">
+  <div style="color:#cc3340; margin-bottom:6px;">⚠ Could not reach Stepwise</div>
+  <div id="error-msg" style="font-size:11px;"></div>
+</div>
+
+<div id="state-results" style="display:none;">
+  <div class="answer-box" id="answer-box">
+    <div class="answer-label">Summary</div>
+    <div id="answer-text"></div>
+  </div>
+  <div class="results-label">Relevant steps</div>
+  <div id="cards-container"></div>
+</div>
+
+<script>
+  const client = ZAFClient.init();
+  client.invoke('resize', { width: '100%', height: '550px' });
+
+  let apiUrl = '';
+
+  function formatTimestamp(seconds) {
+    if (!seconds && seconds !== 0) return null;
+    const s = Math.round(seconds);
+    const m = Math.floor(s / 60);
+    const rem = s % 60;
+    return `${m}:${rem.toString().padStart(2, '0')}`;
+  }
+
+  function buildYouTubeUrl(step) {
+    const vid = step.video_id;
+    const ts = Math.round(step.timestamp_start || 0);
+    if (vid && step.source_type === 'youtube') {
+      return `https://youtu.be/${vid}?t=${ts}`;
+    }
+    if (step.source_url && step.source_url.startsWith('http')) {
+      return step.source_url;
+    }
+    return null;
+  }
+
+  function showState(name) {
+    document.getElementById('state-loading').classList.remove('active');
+    document.getElementById('state-error').classList.remove('active');
+    if (name === 'loading') document.getElementById('state-loading').classList.add('active');
+    if (name === 'error')   document.getElementById('state-error').classList.add('active');
+    document.getElementById('state-results').style.display = (name === 'results') ? 'block' : 'none';
+  }
+
+  function renderResults(data) {
+    const { answer, steps } = data;
+
+    // Answer summary
+    if (answer && answer !== 'No relevant steps found.') {
+      document.getElementById('answer-text').textContent = answer;
+      document.getElementById('answer-box').classList.add('active');
+    }
+
+    const container = document.getElementById('cards-container');
+    container.innerHTML = '';
+
+    if (!steps || steps.length === 0) {
+      container.innerHTML = '<div class="no-results">No relevant tutorials found for this ticket.</div>';
+      showState('results');
+      return;
+    }
+
+    steps.forEach(step => {
+      const url = buildYouTubeUrl(step);
+      const ts = formatTimestamp(step.timestamp_start);
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      card.innerHTML = `
+        <div class="card-tutorial">${escHtml(step.tutorial_title || 'Tutorial')}</div>
+        <div class="card-text">${escHtml(step.text || '')}</div>
+        <div class="card-footer">
+          ${ts ? `<span class="timestamp-badge">⏱ ${ts}</span>` : ''}
+          ${url ? `<button class="insert-btn" data-url="${escHtml(url)}">Insert link</button>` : ''}
+        </div>
+      `;
+
+      // Insert link handler
+      const btn = card.querySelector('.insert-btn');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          const link = btn.dataset.url;
+          const title = step.tutorial_title || 'Tutorial';
+          const stepText = (step.text || '').slice(0, 80);
+          const insertText = `\n\n📹 ${title}${ts ? ` (${ts})` : ''}\n${link}\n`;
+          client.invoke('ticket.comment.appendText', insertText);
+          btn.textContent = 'Inserted ✓';
+          btn.classList.add('copied');
+          setTimeout(() => {
+            btn.textContent = 'Insert link';
+            btn.classList.remove('copied');
+          }, 2000);
+        });
+      }
+
+      container.appendChild(card);
+    });
+
+    showState('results');
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  async function runQuery() {
+    showState('loading');
+    document.getElementById('answer-box').classList.remove('active');
+    document.getElementById('cards-container').innerHTML = '';
+
+    try {
+      // Get ticket data + app settings
+      const [ticketData, settingsData] = await Promise.all([
+        client.get(['ticket.subject', 'ticket.description']),
+        client.metadata(),
+      ]);
+
+      apiUrl = (settingsData.settings && settingsData.settings.api_url) || apiUrl;
+
+      const subject = ticketData['ticket.subject'] || '';
+      const description = (ticketData['ticket.description'] || '').slice(0, 400);
+      const query = [subject, description].filter(Boolean).join(' — ');
+
+      if (!query.trim()) {
+        document.getElementById('error-msg').textContent = 'Ticket has no subject or description yet.';
+        showState('error');
+        return;
+      }
+
+      const resp = await fetch(`${apiUrl}/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, top_k: 5 }),
+      });
+
+      if (!resp.ok) throw new Error(`API returned ${resp.status}`);
+      const data = await resp.json();
+      renderResults(data);
+
+    } catch (err) {
+      document.getElementById('error-msg').textContent = err.message || String(err);
+      showState('error');
+    }
+  }
+
+  document.getElementById('refresh-btn').addEventListener('click', runQuery);
+
+  // Auto-run on load
+  runQuery();
+</script>
+</body>
+</html>

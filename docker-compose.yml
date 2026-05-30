@@ -1,0 +1,36 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DATA_DIR: /app/data
+      DB_PATH: /app/data/stepwise.db
+      CHROMA_PATH: /app/data/chroma
+      FRAMES_DIR: /app/data/frames
+    volumes:
+      - ./data:/app/data
+      - ./stepwise:/app/stepwise   # live source mount — restart picks up changes
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      target: dev
+    ports:
+      - "3000:3000"
+    environment:
+      API_BASE: http://api:8000
+      DATA_DIR: /app/data
+      CHOKIDAR_USEPOLLING: "true"   # HMR file watching inside Docker on macOS
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - ./web:/app                  # source mount — edits hot-reload instantly
+      - /app/node_modules           # keep container's node_modules, not the host's
+      - /app/.next                  # isolate build cache from host
+      - ./data:/app/data:ro
+    depends_on:
+      - api
+    restart: unless-stopped
