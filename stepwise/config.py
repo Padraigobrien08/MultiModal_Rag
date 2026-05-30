@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     structuring_model: str = "claude-haiku-4-5-20251001"
     drive_token_path: Path = Path("./data/drive_token.json")
 
+    # Auto-ingestion: poll watched sources on an interval inside the API process
+    watcher_poll_enabled: bool = True
+    watcher_poll_interval_minutes: int = 30
+
 settings = Settings()
 
 # ensure data dirs exist

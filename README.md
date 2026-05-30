@@ -236,7 +236,7 @@ The endgame is a system that tells you *what to record next* and ingests it the 
    └──────────────────────────────────────────────────────────┘
 ```
 
-- **Watchers** (`/watchers`) track YouTube channels (via public RSS — no API key), Drive folders (modified-time diff), and Notion databases (last-edited filter). `POST /watchers/poll` is safe to wire to a cron.
+- **Watchers** (`/watchers`) track YouTube channels (via public RSS — no API key), Drive folders (modified-time diff), and Notion databases (last-edited filter). A built-in APScheduler job polls every active source on an interval (default 30 min) and auto-queues anything new — no external cron required. `POST /watchers/poll` triggers an immediate check.
 - **Gaps** (`/gaps`) embeds poorly-served queries, clusters them by cosine similarity, and asks Claude to name each gap with a suggested tutorial title and YouTube search terms.
 
 ---
@@ -253,6 +253,8 @@ Set via `.env` (see [`.env.example`](.env.example)):
 | `FRAME_INTERVAL_SECONDS` | `5` | Frame sampling interval |
 | `EMBEDDING_MODEL` | `all-MiniLM-L6-v2` | Text embedding model |
 | `DRIVE_TOKEN_PATH` | `./data/drive_token.json` | Google Drive OAuth token |
+| `WATCHER_POLL_ENABLED` | `true` | Run the auto-ingestion scheduler in-process |
+| `WATCHER_POLL_INTERVAL_MINUTES` | `30` | How often watched sources are polled |
 
 ---
 

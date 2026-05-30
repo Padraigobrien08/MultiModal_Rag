@@ -172,6 +172,7 @@ export default function WatchersPage() {
   const [pollingAll, setPollingAll] = useState(false);
   const [pollAllResult, setPollAllResult] = useState<{ jobs_queued: number } | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [scheduler, setScheduler] = useState<{ running: boolean; interval_minutes: number | null } | null>(null);
 
   // Form state
   const [sourceType, setSourceType] = useState<SourceType>("youtube_channel");
@@ -191,6 +192,13 @@ export default function WatchersPage() {
   }, []);
 
   useEffect(() => { fetchWatchers(); }, [fetchWatchers]);
+
+  useEffect(() => {
+    fetch("/api/watchers/scheduler")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setScheduler(d); })
+      .catch(() => {});
+  }, []);
 
   async function handlePollAll() {
     setPollingAll(true);
@@ -271,9 +279,19 @@ export default function WatchersPage() {
             Watched Sources
           </h1>
           <p className="text-muted-foreground text-sm">
-            New content is detected automatically. Hit Poll to check now, or set up a cron job on{" "}
-            <code className="text-xs bg-white/[0.06] px-1.5 py-0.5 rounded font-mono">POST /api/watchers/poll</code>.
+            New content is detected and ingested automatically. Hit Poll to check a source right now.
           </p>
+          {scheduler?.running && scheduler.interval_minutes != null && (
+            <div className="inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 rounded-full border border-primary/20 bg-primary/5">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
+              </span>
+              <span className="text-xs font-mono text-primary">
+                Auto-polling every {scheduler.interval_minutes} min
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2 mt-8">

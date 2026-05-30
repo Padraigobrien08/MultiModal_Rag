@@ -59,6 +59,21 @@ def _mark_zombie_jobs():
         session.commit()
 
 
+@app.on_event("startup")
+def _start_watcher_scheduler():
+    """Begin autonomous polling of watched sources, if enabled."""
+    if not settings.watcher_poll_enabled:
+        return
+    from stepwise.ingestion import scheduler
+    scheduler.start(settings.watcher_poll_interval_minutes, _poll_all_active)
+
+
+@app.on_event("shutdown")
+def _stop_watcher_scheduler():
+    from stepwise.ingestion import scheduler
+    scheduler.shutdown()
+
+
 class IngestRequest(BaseModel):
     url: str
     title: Optional[str] = None
@@ -626,22 +641,38 @@ def delete_watcher(watcher_id: str):
         session.commit()
 
 
+def _poll_all_active(tasks) -> list[str]:
+    """Poll every active watcher, enqueuing ingestion via `tasks`. Returns new job IDs.
+
+    `tasks` only needs an `add_task(fn, *args)` method, so this works with both
+    FastAPI's BackgroundTasks and the scheduler's thread-pool shim.
+    """
+    import logging
+    from stepwise.ingestion.watcher import poll_watcher
+    total_jobs: list[str] = []
+    with get_db_session() as session:
+        watchers = session.query(WatcherDB).filter_by(active=True).all()
+        for watcher in watchers:
+            try:
+                total_jobs.extend(poll_watcher(watcher, session, tasks))
+            except Exception as e:
+                logging.getLogger(__name__).warning("Watcher %s poll failed: %s", watcher.id, e)
+        session.commit()
+    return total_jobs
+
+
 @app.post("/watchers/poll", status_code=202)
 def poll_all_watchers(background_tasks: BackgroundTasks) -> dict:
     """Trigger a poll of all active watchers. Safe to call on a cron schedule."""
-    from stepwise.ingestion.watcher import poll_watcher
-    with get_db_session() as session:
-        watchers = session.query(WatcherDB).filter_by(active=True).all()
-        total_jobs: list[str] = []
-        for watcher in watchers:
-            try:
-                job_ids = poll_watcher(watcher, session, background_tasks)
-                total_jobs.extend(job_ids)
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).warning("Watcher %s poll failed: %s", watcher.id, e)
-        session.commit()
+    total_jobs = _poll_all_active(background_tasks)
     return {"jobs_queued": len(total_jobs), "job_ids": total_jobs}
+
+
+@app.get("/watchers/scheduler")
+def get_scheduler_status() -> dict:
+    """Report whether autonomous polling is running and at what interval."""
+    from stepwise.ingestion import scheduler
+    return scheduler.status()
 
 
 @app.post("/watchers/{watcher_id}/poll", status_code=202)
