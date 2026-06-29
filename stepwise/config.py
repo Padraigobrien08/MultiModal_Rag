@@ -1,5 +1,6 @@
-from pydantic_settings import BaseSettings
 from pathlib import Path
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -22,6 +23,19 @@ class Settings(BaseSettings):
     # Auto-ingestion: poll watched sources on an interval inside the API process
     watcher_poll_enabled: bool = True
     watcher_poll_interval_minutes: int = 30
+
+    # Optional API key — when set, clients must send X-API-Key (or Authorization: Bearer).
+    # Leave unset for local development with no auth.
+    api_key: str | None = None
+
+    # Comma-separated allowed origins, or "*" for all (default — convenient for local dev).
+    cors_origins: str = "*"
+
+    def cors_origin_list(self) -> list[str]:
+        raw = self.cors_origins.strip()
+        if raw == "*":
+            return ["*"]
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
 settings = Settings()
 

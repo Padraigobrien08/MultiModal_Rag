@@ -20,6 +20,7 @@ from stepwise.structuring.trivial_filter import filter_trivial_steps
 from stepwise.indexing import index_tutorial, get_db_session
 from stepwise.indexing.dedup import check_tutorial_overlap
 from stepwise.retrieval import query_steps, query_steps_stream
+from stepwise.api.middleware import APIKeyMiddleware
 
 app = FastAPI(title="Stepwise", version="0.1.0")
 
@@ -43,10 +44,11 @@ def _canonical_url(url: str) -> str:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Zendesk iframes can come from any subdomain
+    allow_origins=settings.cors_origin_list(),
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
+app.add_middleware(APIKeyMiddleware)
 
 
 @app.on_event("startup")

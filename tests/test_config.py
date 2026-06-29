@@ -22,6 +22,9 @@ class TestSettings:
         assert s.embedding_model == "all-MiniLM-L6-v2"
         assert s.watcher_poll_enabled is True
         assert s.watcher_poll_interval_minutes == 30
+        assert s.api_key is None
+        assert s.cors_origins == "*"
+        assert s.cors_origin_list() == ["*"]
 
     def test_env_vars_override_paths(self, monkeypatch, tmp_path):
         data = tmp_path / "custom_data"
@@ -70,6 +73,16 @@ class TestSettings:
 
         assert s.structuring_model == "claude-haiku-4-5-20251001"
         assert s.drive_token_path == Path("./data/drive_token.json")
+
+    def test_api_key_and_cors_from_env(self, monkeypatch):
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+        monkeypatch.setenv("API_KEY", "stepwise-secret")
+        monkeypatch.setenv("CORS_ORIGINS", "http://localhost:3000, https://app.example.com")
+
+        s = Settings()
+
+        assert s.api_key == "stepwise-secret"
+        assert s.cors_origin_list() == ["http://localhost:3000", "https://app.example.com"]
 
     def test_missing_required_api_key_raises(self, monkeypatch):
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)

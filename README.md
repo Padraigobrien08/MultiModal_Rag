@@ -257,6 +257,10 @@ Set via `.env` (see [`.env.example`](.env.example)):
 | `DRIVE_TOKEN_PATH` | `./data/drive_token.json` | Google Drive OAuth token |
 | `WATCHER_POLL_ENABLED` | `true` | Run the auto-ingestion scheduler in-process |
 | `WATCHER_POLL_INTERVAL_MINUTES` | `30` | How often watched sources are polled |
+| `API_KEY` | *(unset)* | When set, require `X-API-Key` or `Authorization: Bearer` on all routes except `/health` and `/docs` |
+| `CORS_ORIGINS` | `*` | Comma-separated allowed origins, or `*` for local dev |
+
+When `API_KEY` is set, the web app, Zendesk sidebar, and scripts must include the key in requests. Leave it unset for local development.
 
 ---
 
