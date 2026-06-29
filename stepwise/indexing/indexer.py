@@ -3,10 +3,10 @@ from pathlib import Path
 import chromadb
 import numpy as np
 from PIL import Image
-from sentence_transformers import SentenceTransformer
 from sqlalchemy.orm import Session
 
 from stepwise.config import settings
+from stepwise.ml.registry import get_clip_encoder, get_text_encoder
 from stepwise.models import StepDB, Tutorial, TutorialDB, get_engine
 
 # Embedding dimensions — must stay in sync with the models below.
@@ -16,8 +16,6 @@ FUSED_EMB_DIM = TEXT_EMB_DIM + IMAGE_EMB_DIM
 
 _engine = None
 _chroma_client = None
-_text_model = None
-_clip_model = None
 
 
 def _get_engine():
@@ -39,17 +37,11 @@ def _get_chroma():
 
 
 def _get_text_model():
-    global _text_model
-    if _text_model is None:
-        _text_model = SentenceTransformer(settings.embedding_model)
-    return _text_model
+    return get_text_encoder()
 
 
 def _get_clip_model():
-    global _clip_model
-    if _clip_model is None:
-        _clip_model = SentenceTransformer("clip-ViT-B-32")
-    return _clip_model
+    return get_clip_encoder()
 
 
 def _fuse_embeddings(text_emb: np.ndarray, image_emb: np.ndarray | None) -> np.ndarray:

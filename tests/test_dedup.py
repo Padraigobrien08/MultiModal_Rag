@@ -93,7 +93,7 @@ class TestDeduplicateSteps:
         mock_model = MagicMock()
         mock_model.encode.return_value = np.stack([emb_similar_a, emb_similar_b, emb_distinct])
 
-        with patch("stepwise.structuring.deduplicator._get_model", return_value=mock_model):
+        with patch("stepwise.structuring.deduplicator.get_text_encoder", return_value=mock_model):
             result = deduplicate_steps(steps)
 
         assert len(result) == 2
@@ -110,7 +110,7 @@ class TestDeduplicateSteps:
             [np.array([1.0, 0.0]), np.array([0.0, 1.0])]
         )
 
-        with patch("stepwise.structuring.deduplicator._get_model", return_value=mock_model):
+        with patch("stepwise.structuring.deduplicator.get_text_encoder", return_value=mock_model):
             result = deduplicate_steps(steps)
 
         assert [s.id for s in result] == ["s1", "s2"]

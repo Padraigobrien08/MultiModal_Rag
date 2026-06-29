@@ -75,7 +75,7 @@ class TestIngestIdempotency:
         with patch(
             "stepwise.api.app.get_db_session",
             side_effect=lambda: _FakeSessionCtx(session),
-        ):
+        ), patch("stepwise.api.app.run_youtube_ingestion"):
             resp = app_client.post(
                 "/ingest",
                 json={"url": "https://www.youtube.com/watch?v=brand_new_id"},

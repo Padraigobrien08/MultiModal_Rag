@@ -10,12 +10,12 @@ import numpy as np
 
 from stepwise.config import settings
 from stepwise.indexing.indexer import _fuse_embeddings, _get_chroma, _get_text_model, get_db_session
+from stepwise.ml.registry import get_cross_encoder
 from stepwise.models import QueryLogDB, TutorialDB
 
 log = logging.getLogger(__name__)
 
 _client = None
-_cross_encoder = None
 
 TOP_K = 5
 FETCH_K = 15        # candidates fetched before cross-encoder re-ranking
@@ -41,13 +41,7 @@ def _get_client() -> anthropic.Anthropic:
 
 
 def _get_cross_encoder():
-    global _cross_encoder
-    if _cross_encoder is None:
-        from sentence_transformers import CrossEncoder
-        log.info("Loading cross-encoder (first-time download may take ~30s)…")
-        _cross_encoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
-        log.info("Cross-encoder ready")
-    return _cross_encoder
+    return get_cross_encoder()
 
 
 # ── HyDE ─────────────────────────────────────────────────────────────────────

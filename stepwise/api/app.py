@@ -1,5 +1,6 @@
 import re
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from urllib.parse import urlparse, parse_qs
 from fastapi import FastAPI, BackgroundTasks, HTTPException, UploadFile, File, Form
@@ -9,20 +10,37 @@ from pydantic import BaseModel
 from typing import Optional
 import chromadb
 
-from stepwise.models import Tutorial, JobDB, TutorialDB, StepDB, FeedbackDB, WatcherDB
+from stepwise.models import JobDB, TutorialDB, StepDB, FeedbackDB, WatcherDB
 from stepwise.config import settings
-from stepwise.ingestion import ingest_youtube, ingest_images
-from stepwise.alignment import align_segments
-from stepwise.structuring import structure_steps, structure_segment
-from stepwise.structuring.deduplicator import deduplicate_steps
-from stepwise.structuring.consolidator import consolidate_steps
-from stepwise.structuring.trivial_filter import filter_trivial_steps
-from stepwise.indexing import index_tutorial, get_db_session
-from stepwise.indexing.dedup import check_tutorial_overlap
+from stepwise.indexing import get_db_session
 from stepwise.retrieval import query_steps, query_steps_stream
-from stepwise.api.middleware import APIKeyMiddleware
+from stepwise.api.middleware import APIKeyMiddleware, RequestIDMiddleware
+from stepwise.ingestion.tasks import (
+    run_drive_ingestion,
+    run_image_ingestion,
+    run_notion_ingestion_api,
+    run_youtube_ingestion,
+)
+from stepwise.logging_config import setup_logging
 
-app = FastAPI(title="Stepwise", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    setup_logging()
+    with get_db_session() as session:
+        session.query(JobDB).filter(
+            JobDB.status.in_(["pending", "running"])
+        ).update({"status": "error", "error": "Server restarted while job was in progress"})
+        session.commit()
+    if settings.watcher_poll_enabled:
+        from stepwise.ingestion import scheduler
+        scheduler.start(settings.watcher_poll_interval_minutes, _poll_all_active)
+    yield
+    from stepwise.ingestion import scheduler
+    scheduler.shutdown()
+
+
+app = FastAPI(title="Stepwise", version="0.1.0", lifespan=lifespan)
 
 
 def _canonical_url(url: str) -> str:
@@ -49,31 +67,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(APIKeyMiddleware)
-
-
-@app.on_event("startup")
-def _mark_zombie_jobs():
-    """Any job still running/pending from a previous process will never finish."""
-    with get_db_session() as session:
-        session.query(JobDB).filter(
-            JobDB.status.in_(["pending", "running"])
-        ).update({"status": "error", "error": "Server restarted while job was in progress"})
-        session.commit()
-
-
-@app.on_event("startup")
-def _start_watcher_scheduler():
-    """Begin autonomous polling of watched sources, if enabled."""
-    if not settings.watcher_poll_enabled:
-        return
-    from stepwise.ingestion import scheduler
-    scheduler.start(settings.watcher_poll_interval_minutes, _poll_all_active)
-
-
-@app.on_event("shutdown")
-def _stop_watcher_scheduler():
-    from stepwise.ingestion import scheduler
-    scheduler.shutdown()
+app.add_middleware(RequestIDMiddleware)
 
 
 class IngestRequest(BaseModel):
@@ -115,93 +109,6 @@ class WatcherCreateRequest(BaseModel):
     config: dict = {}  # token_path, notion_token, recursive, etc.
 
 
-def _set_stage(job_id: str, stage: str) -> None:
-    with get_db_session() as session:
-        job = session.get(JobDB, job_id)
-        job.stage = stage
-        session.commit()
-
-
-def _run_ingestion(job_id: str, url: str, title: Optional[str]) -> None:
-    with get_db_session() as session:
-        job = session.get(JobDB, job_id)
-        job.status = "running"
-        job.stage = "downloading"
-        session.commit()
-
-    try:
-        _set_stage(job_id, "downloading")
-        artifacts = ingest_youtube(url)
-
-        _set_stage(job_id, "aligning")
-        segments = align_segments(artifacts["transcript"], artifacts["frames"])
-
-        _set_stage(job_id, "structuring")
-        tutorial_id = str(uuid.uuid4())
-
-        # Structure segment-by-segment and report progress
-        with get_db_session() as session:
-            job = session.get(JobDB, job_id)
-            job.segments_total = len(segments)
-            job.segments_done = 0
-            session.commit()
-
-        all_steps = []
-        step_number = 1
-        for segment in segments:
-            seg_steps = structure_segment(tutorial_id, segment, step_number)
-            all_steps.extend(seg_steps)
-            step_number += len(seg_steps)
-            with get_db_session() as session:
-                job = session.get(JobDB, job_id)
-                job.segments_done = (job.segments_done or 0) + 1
-                session.commit()
-
-        steps = deduplicate_steps(all_steps)
-        steps = filter_trivial_steps(steps)
-
-        # Consolidate to ~1 step per minute of video
-        if steps:
-            last_ts = max((s.timestamp_end or 0) for s in steps)
-            target = max(10, round(last_ts / 60))
-            if len(steps) > target:
-                _set_stage(job_id, "consolidating")
-                steps = consolidate_steps(steps, target)
-                # Re-number after consolidation
-                for i, s in enumerate(steps, start=1):
-                    s.step_number = i
-                # Filter again — consolidation can reintroduce trivial content
-                steps = filter_trivial_steps(steps)
-
-        _set_stage(job_id, "indexing")
-        tutorial = Tutorial(
-            id=tutorial_id,
-            source_url=url,
-            title=title or artifacts["title"],
-            source_type="youtube",
-            steps=steps,
-            meta={"video_id": artifacts["video_id"]},
-        )
-        index_tutorial(tutorial)
-        check_tutorial_overlap(tutorial_id)
-
-        with get_db_session() as session:
-            job = session.get(JobDB, job_id)
-            job.status = "done"
-            job.stage = None
-            job.tutorial_id = tutorial_id
-            job.step_count = len(steps)
-            session.commit()
-
-    except Exception as e:
-        with get_db_session() as session:
-            job = session.get(JobDB, job_id)
-            job.status = "error"
-            job.stage = None
-            job.error = str(e)
-            session.commit()
-
-
 @app.post("/ingest", status_code=202)
 def ingest(req: IngestRequest, background_tasks: BackgroundTasks) -> dict:
     canonical = _canonical_url(req.url)
@@ -219,7 +126,7 @@ def ingest(req: IngestRequest, background_tasks: BackgroundTasks) -> dict:
         session.add(JobDB(id=job_id, status="pending"))
         session.commit()
 
-    background_tasks.add_task(_run_ingestion, job_id, req.url, req.title)
+    background_tasks.add_task(run_youtube_ingestion, job_id, req.url, req.title)
     return {"job_id": job_id}
 
 
@@ -332,89 +239,8 @@ def reingest_tutorial(tutorial_id: str, background_tasks: BackgroundTasks) -> di
         session.add(JobDB(id=job_id, status="pending"))
         session.commit()
 
-    background_tasks.add_task(_run_ingestion, job_id, url, title)
+    background_tasks.add_task(run_youtube_ingestion, job_id, url, title)
     return {"job_id": job_id}
-
-
-def _run_image_ingestion(job_id: str, files: list[tuple[str, bytes]], title: str) -> None:
-    with get_db_session() as session:
-        job = session.get(JobDB, job_id)
-        job.status = "running"
-        job.stage = "processing"
-        session.commit()
-
-    try:
-        tutorial_id = str(uuid.uuid4())
-        output_dir = settings.frames_dir / tutorial_id
-
-        _set_stage(job_id, "aligning")
-        artifacts = ingest_images(files, output_dir)
-        frames = artifacts["frames"]
-
-        # Each image becomes its own segment
-        from stepwise.models import Segment
-        segments = [
-            Segment(time_start=f["timestamp"], time_end=f["timestamp"] + 10,
-                    transcript="", frame_paths=[f["path"]])
-            for f in frames
-        ]
-
-        _set_stage(job_id, "structuring")
-        with get_db_session() as session:
-            job = session.get(JobDB, job_id)
-            job.segments_total = len(segments)
-            job.segments_done = 0
-            session.commit()
-
-        all_steps = []
-        step_number = 1
-        for i, segment in enumerate(segments):
-            seg_steps = structure_segment(tutorial_id, segment, step_number,
-                                          image_index=i + 1, total_images=len(segments))
-            all_steps.extend(seg_steps)
-            step_number += len(seg_steps)
-            with get_db_session() as session:
-                job = session.get(JobDB, job_id)
-                job.segments_done = (job.segments_done or 0) + 1
-                session.commit()
-
-        steps = deduplicate_steps(all_steps)
-        steps = filter_trivial_steps(steps)
-
-        if steps and len(steps) > max(10, len(frames) // 2):
-            _set_stage(job_id, "consolidating")
-            steps = consolidate_steps(steps, max(10, len(frames)))
-            for i, s in enumerate(steps, start=1):
-                s.step_number = i
-            steps = filter_trivial_steps(steps)
-
-        _set_stage(job_id, "indexing")
-        tutorial = Tutorial(
-            id=tutorial_id,
-            source_url=f"images://{title}",
-            title=title,
-            source_type="images",
-            steps=steps,
-            meta={"image_count": len(frames)},
-        )
-        index_tutorial(tutorial)
-        check_tutorial_overlap(tutorial_id)
-
-        with get_db_session() as session:
-            job = session.get(JobDB, job_id)
-            job.status = "done"
-            job.stage = None
-            job.tutorial_id = tutorial_id
-            job.step_count = len(steps)
-            session.commit()
-
-    except Exception as e:
-        with get_db_session() as session:
-            job = session.get(JobDB, job_id)
-            job.status = "error"
-            job.stage = None
-            job.error = str(e)
-            session.commit()
 
 
 @app.post("/ingest/images", status_code=202)
@@ -430,113 +256,8 @@ async def ingest_images_endpoint(
         session.add(JobDB(id=job_id, status="pending"))
         session.commit()
 
-    background_tasks.add_task(_run_image_ingestion, job_id, file_data, title)
+    background_tasks.add_task(run_image_ingestion, job_id, file_data, title)
     return {"job_id": job_id}
-
-
-def _run_drive_ingestion(job_id: str, req: dict) -> None:
-    """Background task for Drive-sourced ingestion. Artifacts already extracted locally."""
-    with get_db_session() as session:
-        job = session.get(JobDB, job_id)
-        job.status = "running"
-        job.stage = "aligning"
-        session.commit()
-
-    try:
-        _set_stage(job_id, "aligning")
-        segments = align_segments(req["transcript"], req["frames"])
-
-        _set_stage(job_id, "structuring")
-        tutorial_id = str(uuid.uuid4())
-
-        with get_db_session() as session:
-            job = session.get(JobDB, job_id)
-            job.segments_total = len(segments)
-            job.segments_done = 0
-            session.commit()
-
-        all_steps = []
-        step_number = 1
-        for segment in segments:
-            seg_steps = structure_segment(tutorial_id, segment, step_number)
-            all_steps.extend(seg_steps)
-            step_number += len(seg_steps)
-            with get_db_session() as session:
-                job = session.get(JobDB, job_id)
-                job.segments_done = (job.segments_done or 0) + 1
-                session.commit()
-
-        steps = deduplicate_steps(all_steps)
-        steps = filter_trivial_steps(steps)
-
-        if steps:
-            last_ts = max((s.timestamp_end or 0) for s in steps)
-            target = max(10, round(last_ts / 60))
-            if len(steps) > target:
-                _set_stage(job_id, "consolidating")
-                steps = consolidate_steps(steps, target)
-                for i, s in enumerate(steps, start=1):
-                    s.step_number = i
-                steps = filter_trivial_steps(steps)
-
-        _set_stage(job_id, "indexing")
-        meta: dict = {"video_id": req["video_id"]}
-        if req.get("embedded_video_urls"):
-            meta["embedded_video_urls"] = req["embedded_video_urls"]
-
-        tutorial = Tutorial(
-            id=tutorial_id,
-            source_url=req["source_url"],
-            title=req["title"],
-            source_type=req.get("source_type", "drive"),
-            steps=steps,
-            meta=meta,
-        )
-        index_tutorial(tutorial)
-        check_tutorial_overlap(tutorial_id)
-
-        with get_db_session() as session:
-            job = session.get(JobDB, job_id)
-            job.status = "done"
-            job.stage = None
-            job.tutorial_id = tutorial_id
-            job.step_count = len(steps)
-            session.commit()
-
-    except Exception as e:
-        with get_db_session() as session:
-            job = session.get(JobDB, job_id)
-            job.status = "error"
-            job.stage = None
-            job.error = str(e)
-            session.commit()
-
-
-def _run_notion_ingestion_api(job_id: str, page_id: str, title: Optional[str], notion_token: str) -> None:
-    from stepwise.ingestion.notion import ingest_notion_page
-    with get_db_session() as session:
-        job = session.get(JobDB, job_id)
-        job.status = "running"
-        job.stage = "fetching"
-        session.commit()
-    try:
-        artifacts = ingest_notion_page(page_id, notion_token)
-        _run_drive_ingestion(job_id, {
-            "source_url": artifacts["url"],
-            "title": title or artifacts["title"],
-            "video_id": artifacts["video_id"],
-            "transcript": artifacts["transcript"],
-            "frames": artifacts["frames"],
-            "source_type": "notion",
-            "embedded_video_urls": artifacts.get("embedded_video_urls", []),
-        })
-    except Exception as e:
-        with get_db_session() as session:
-            job = session.get(JobDB, job_id)
-            job.status = "error"
-            job.stage = None
-            job.error = str(e)
-            session.commit()
 
 
 @app.post("/ingest/notion", status_code=202)
@@ -553,7 +274,7 @@ def ingest_notion_endpoint(req: NotionIngestRequest, background_tasks: Backgroun
         session.add(JobDB(id=job_id, status="pending"))
         session.commit()
 
-    background_tasks.add_task(_run_notion_ingestion_api, job_id, req.page_id, req.title, req.notion_token)
+    background_tasks.add_task(run_notion_ingestion_api, job_id, req.page_id, req.title, req.notion_token)
     return {"job_id": job_id}
 
 
@@ -570,7 +291,7 @@ def ingest_drive_endpoint(req: DriveIngestRequest, background_tasks: BackgroundT
         session.add(JobDB(id=job_id, status="pending"))
         session.commit()
 
-    background_tasks.add_task(_run_drive_ingestion, job_id, req.model_dump())
+    background_tasks.add_task(run_drive_ingestion, job_id, req.model_dump())
     return {"job_id": job_id}
 
 
@@ -731,7 +452,8 @@ def reindex_all(background_tasks: BackgroundTasks) -> dict:
 def _run_reindex() -> None:
     import logging
     log = logging.getLogger(__name__)
-    from stepwise.indexing.indexer import _get_chroma, _get_text_model, _get_clip_model, _fuse_embeddings
+    from stepwise.indexing.indexer import _fuse_embeddings, _get_chroma
+    from stepwise.ml.registry import get_clip_encoder, get_text_encoder
     from pathlib import Path
     from PIL import Image
 
@@ -747,8 +469,8 @@ def _run_reindex() -> None:
     chroma = _get_chroma()
     steps_col = chroma.get_or_create_collection("steps")
     centroids_col = chroma.get_or_create_collection("tutorial_centroids")
-    text_model = _get_text_model()
-    clip_model = _get_clip_model()
+    text_model = get_text_encoder()
+    clip_model = get_clip_encoder()
 
     for tid, title, source_url, source_type, meta, steps in tutorial_data:
         if not steps:

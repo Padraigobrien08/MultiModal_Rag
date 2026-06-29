@@ -11,41 +11,34 @@ console = Console()
 @app.command()
 def ingest(url: str, title: str = typer.Option(None, help="Optional title override")):
     """Ingest a YouTube tutorial URL and index its steps."""
+    import uuid
+
     from stepwise.ingestion import ingest_youtube
-    from stepwise.alignment import align_segments
-    from stepwise.structuring import structure_steps
-    from stepwise.indexing import index_tutorial
-    from stepwise.models import Tutorial
+    from stepwise.ingestion.pipeline import run_ingestion_pipeline, video_consolidation_target
 
     with console.status(f"[bold green]Ingesting {url}..."):
         artifacts = ingest_youtube(url)
 
-    console.print(f"[green]✓[/green] Extracted {len(artifacts['transcript'])} transcript entries, {len(artifacts['frames'])} frames")
-
-    with console.status("[bold green]Aligning segments..."):
-        segments = align_segments(artifacts["transcript"], artifacts["frames"])
-
-    console.print(f"[green]✓[/green] Built {len(segments)} segments")
+    console.print(
+        f"[green]✓[/green] Extracted {len(artifacts['transcript'])} transcript entries, "
+        f"{len(artifacts['frames'])} frames"
+    )
 
     tutorial_id = str(uuid.uuid4())
-    with console.status("[bold green]Structuring steps with Claude..."):
-        steps = structure_steps(tutorial_id, segments)
-
-    console.print(f"[green]✓[/green] Extracted {len(steps)} steps")
-
-    with console.status("[bold green]Indexing..."):
-        tutorial = Tutorial(
-            id=tutorial_id,
+    with console.status("[bold green]Aligning, structuring, and indexing..."):
+        tutorial = run_ingestion_pipeline(
             source_url=url,
-            title=title or artifacts["video_id"],
+            title=title or artifacts["title"],
             source_type="youtube",
-            steps=steps,
             meta={"video_id": artifacts["video_id"]},
+            transcript=artifacts["transcript"],
+            frames=artifacts["frames"],
+            tutorial_id=tutorial_id,
+            consolidation_target_fn=video_consolidation_target,
         )
-        index_tutorial(tutorial)
 
     console.print(f"\n[bold]Done.[/bold] Tutorial ID: [cyan]{tutorial_id}[/cyan]")
-    console.print(f"Indexed [bold]{len(steps)}[/bold] steps.")
+    console.print(f"Indexed [bold]{len(tutorial.steps)}[/bold] steps.")
 
 
 @app.command()
