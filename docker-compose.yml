@@ -23,6 +23,7 @@ services:
       - "3000:3000"
     environment:
       API_BASE: http://api:8000
+      # API_KEY: ${API_KEY}  # set when API auth is enabled — must match api service
       DATA_DIR: /app/data
       CHOKIDAR_USEPOLLING: "true"   # HMR file watching inside Docker on macOS
       WATCHPACK_POLLING: "true"

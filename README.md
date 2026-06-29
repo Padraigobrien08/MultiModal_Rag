@@ -260,7 +260,7 @@ Set via `.env` (see [`.env.example`](.env.example)):
 | `API_KEY` | *(unset)* | When set, require `X-API-Key` or `Authorization: Bearer` on all routes except `/health` and `/docs` |
 | `CORS_ORIGINS` | `*` | Comma-separated allowed origins, or `*` for local dev |
 
-When `API_KEY` is set, the web app, Zendesk sidebar, and scripts must include the key in requests. Leave it unset for local development.
+When `API_KEY` is set, the **API**, **web BFF** (`API_KEY` in the Next.js server env — forwarded automatically via `web/lib/backend.ts`), **Zendesk sidebar** (optional `api_key` app setting), and scripts must include the key in requests. Leave it unset for local development.
 
 ---
 

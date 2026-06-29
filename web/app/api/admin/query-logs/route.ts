@@ -1,13 +1,12 @@
-const API_BASE = process.env.API_BASE ?? "http://localhost:8000";
+import { fetchBackend } from "@/lib/backend";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const since = searchParams.get("since");
-  const upstream = new URL(`${API_BASE}/admin/query-logs`);
-  upstream.searchParams.set("limit", "500");
-  if (since) upstream.searchParams.set("since", since);
-  const res = await fetch(upstream.toString());
+  const params = new URLSearchParams({ limit: "500" });
+  if (since) params.set("since", since);
+  const res = await fetchBackend(`/admin/query-logs?${params.toString()}`);
   return Response.json(await res.json(), { status: res.status });
 }

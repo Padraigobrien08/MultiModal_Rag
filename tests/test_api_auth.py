@@ -56,3 +56,27 @@ class TestAPIKeyMiddleware:
     def test_options_preflight_allowed_without_key(self, auth_client):
         resp = auth_client.options("/query/sync")
         assert resp.status_code != 401
+
+
+class TestAuthenticatedIntegrationSmoke:
+    """Smoke test: protected API surface works when API_KEY is configured."""
+
+    def test_health_public_and_tutorials_protected(self, auth_client):
+        assert auth_client.get("/health").status_code == 200
+        assert auth_client.get("/tutorials").status_code == 401
+
+    def test_authenticated_tutorials_and_query_sync(self, auth_client):
+        headers = {"X-API-Key": "test-secret-key"}
+        assert auth_client.get("/tutorials", headers=headers).status_code == 200
+
+        with patch(
+            "stepwise.api.app.query_steps",
+            return_value={"answer": "ok", "steps": []},
+        ):
+            resp = auth_client.post(
+                "/query/sync",
+                json={"query": "how do I refund?"},
+                headers=headers,
+            )
+        assert resp.status_code == 200
+        assert resp.json()["answer"] == "ok"

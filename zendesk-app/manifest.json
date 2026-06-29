@@ -18,6 +18,12 @@
       "required": true,
       "default": "https://your-stepwise-api.railway.app",
       "secure": false
+    },
+    {
+      "name": "api_key",
+      "type": "text",
+      "required": false,
+      "secure": true
     }
   ],
   "defaultLocale": "en"
