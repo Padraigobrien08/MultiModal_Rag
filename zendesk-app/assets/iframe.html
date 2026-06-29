@@ -311,7 +311,7 @@
         return;
       }
 
-      const resp = await fetch(`${apiUrl}/query`, {
+      const resp = await fetch(`${apiUrl}/query/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query, top_k: 5 }),

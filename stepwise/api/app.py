@@ -697,6 +697,12 @@ def query(req: QueryRequest) -> StreamingResponse:
     )
 
 
+@app.post("/query/sync")
+def query_sync(req: QueryRequest) -> dict:
+    """Non-streaming query — returns JSON {answer, steps}. Used by eval, Zendesk, and tests."""
+    return query_steps(req.query, tutorial_id=req.tutorial_id, top_k=req.top_k, history=req.history)
+
+
 @app.post("/feedback", status_code=201)
 def submit_feedback(req: FeedbackRequest) -> dict:
     with get_db_session() as session:
