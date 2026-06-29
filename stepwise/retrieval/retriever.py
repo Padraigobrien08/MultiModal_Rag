@@ -5,12 +5,12 @@ import time
 import uuid
 from collections.abc import Generator
 
-import numpy as np
 import anthropic
+import numpy as np
 
 from stepwise.config import settings
-from stepwise.indexing.indexer import _get_chroma, _get_text_model, _get_clip_model, _fuse_embeddings, get_db_session
-from stepwise.models import TutorialDB, QueryLogDB
+from stepwise.indexing.indexer import _fuse_embeddings, _get_chroma, _get_text_model, get_db_session
+from stepwise.models import QueryLogDB, TutorialDB
 
 log = logging.getLogger(__name__)
 
@@ -106,21 +106,17 @@ def _relevant_tutorial_ids(query_embedding: list[float], exclude_id: str | None)
     return [m["tutorial_id"] for m in results["metadatas"][0]]
 
 
-# ── Cross-encoder re-ranking ──────────────────────────────────────────────────
+def _make_query_embedding(text_emb: np.ndarray) -> np.ndarray:
+    """Build a query vector in the same fused space as indexed steps (896-dim).
 
-def _rerank(query: str, triples: list[tuple]) -> list[tuple]:
-    """Re-rank (doc, meta, dist) triples using a cross-encoder for precision."""
-    if len(triples) <= 1:
-        return triples
-    try:
-        ce = _get_cross_encoder()
-        pairs = [(query, doc) for doc, _, _ in triples]
-        scores = ce.predict(pairs)
-        ranked = sorted(zip(triples, scores), key=lambda x: x[1], reverse=True)
-        return [t for t, _ in ranked]
-    except Exception:
-        log.warning("Cross-encoder re-ranking failed, falling back to distance order")
-        return triples
+    Text-first retrieval: queries embed HyDE hypothetical text only. The visual
+    half is literal zeros — not CLIP-text — so query vectors align with steps
+    whose on-screen content was distilled into Claude-extracted descriptions.
+
+    Screenshot CLIP embeddings are stored at index time for diagnostics and
+    future visual-query work; they are not used at query time today.
+    """
+    return _fuse_embeddings(text_emb, None)
 
 
 # ── Core lookup ───────────────────────────────────────────────────────────────
@@ -139,7 +135,7 @@ def _chromadb_lookup(
 
     t1 = time.monotonic()
     text_emb = _get_text_model().encode(hypo, convert_to_numpy=True)
-    query_embedding = _fuse_embeddings(text_emb, None).tolist()
+    query_embedding = _make_query_embedding(text_emb).tolist()
 
     collection = _get_chroma().get_or_create_collection("steps")
 

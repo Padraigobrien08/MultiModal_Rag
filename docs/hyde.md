@@ -49,39 +49,61 @@ team member?"                     Member. Navigate to Settings →
         ▼                                  ▼
 [question vector]                 [answer-shaped vector]
         │                                  │
-        │   ← big gap →                    │  ← small gap →
+        │   ← big gap →                    │  ← smaller gap →
         ▼                                  ▼
 [indexed step about inviting]     [indexed step about inviting]
 ```
 
-## Why it also fixes our specific asymmetry
+## How Stepwise embeds steps and queries
 
-In Stepwise, indexed steps are embedded as:
+Stepwise uses **text-first retrieval over visually enriched step descriptions**.
+Screenshots matter at **ingestion** (Claude reads them when extracting steps)
+and at **answer time** (retrieved steps link back to frame images), but
+**query-time search is driven by text**, not by image-to-image matching.
 
-```
-[text_norm (768-dim) | clip_image_norm_or_zeros (512-dim)]
-```
+### Index time (per step)
 
-Most steps have no screenshot, so the CLIP half is **zeros**.
-
-Before HyDE, the query was embedded as:
-
-```
-[text_norm (768-dim) | clip_text_norm (512-dim)]
-```
-
-The CLIP half of the query is a text-encoding, the CLIP half of most indexed
-steps is zeros. These don't cancel — they add a constant ~1.0 noise term to
-every distance, making all results look equally distant.
-
-With HyDE, the hypothetical is text-only, so we embed it as:
+Each step is stored as a fused **896-dimensional** unit vector:
 
 ```
-[text_norm (768-dim) | zeros (512-dim)]
+[text_norm (384-dim) | image_norm_or_zeros (512-dim)]
 ```
 
-Now query and indexed steps are in **the same subspace**. The distance is
-purely driven by how semantically close the hypothetical is to each step.
+| Component | Model | Dimensions | When used |
+|---|---|---|---|
+| Text | `all-MiniLM-L6-v2` | 384 | Always — step title + description |
+| Image | `clip-ViT-B-32` | 512 | When a screenshot file exists on disk |
+| Fused | concat + L2 norm | 896 | Stored in ChromaDB |
+
+Steps without a screenshot use a **zero image half** before the final
+normalisation. Steps with a screenshot include a CLIP image embedding in the
+image half. That visual signal is stored for diagnostics and future work; it is
+**not** how queries are matched today.
+
+### Query time
+
+1. HyDE generates a hypothetical answer-shaped step (text only).
+2. MiniLM embeds that text (384-dim).
+3. `_make_query_embedding()` fuses it with a **zero visual half** (512-dim):
+
+```
+[text_norm (384-dim) | zeros (512-dim)]  →  L2-normalised 896-dim query vector
+```
+
+No CLIP model is loaded during query retrieval. Visual information reaches
+search only through Claude-extracted step descriptions (e.g. button labels, menu
+paths) that were written during multimodal structuring.
+
+### Why the zero visual half
+
+Using a zero image half at query time keeps query vectors in the same subspace
+as text-heavy indexed steps and avoids mixing CLIP-text encodings with CLIP-image
+encodings. The distance score is driven by how close the HyDE hypothetical is to
+each step's **text** embedding, with indexed screenshot embeddings acting as a
+secondary signal in the fused space rather than enabling image-query search.
+
+**True visual query retrieval** (e.g. search by screenshot or CLIP-text query
+embedding) is a future extension, not current behaviour.
 
 ## Trade-offs
 
@@ -89,8 +111,8 @@ purely driven by how semantically close the hypothetical is to each step.
 |---|---|
 | Significantly better recall for question-style queries | Adds one LLM call before retrieval (~0.5–1s latency) |
 | Closes query-document vocabulary gap | Hypothetical can occasionally mislead if LLM hallucinates an irrelevant topic |
-| Free accuracy improvement — no re-indexing needed | The hallucination risk is low in practice because we only use the *embedding*, not the text itself |
-| Fixes the CLIP-half asymmetry in our embedding scheme | |
+| Honest text-first retrieval — no false claim of image search | Does not match on raw pixels or uploaded query images |
+| Query vectors align with zero-image-half steps | Steps with strong CLIP image halves are a weaker text-first match |
 
 ## The hallucination doesn't matter
 

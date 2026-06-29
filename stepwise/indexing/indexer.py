@@ -1,13 +1,18 @@
 from pathlib import Path
 
-import numpy as np
-from sqlalchemy.orm import Session
-from sentence_transformers import SentenceTransformer
-from PIL import Image
 import chromadb
+import numpy as np
+from PIL import Image
+from sentence_transformers import SentenceTransformer
+from sqlalchemy.orm import Session
 
 from stepwise.config import settings
-from stepwise.models import Tutorial, Step, TutorialDB, StepDB, get_engine
+from stepwise.models import StepDB, Tutorial, TutorialDB, get_engine
+
+# Embedding dimensions — must stay in sync with the models below.
+TEXT_EMB_DIM = 384   # all-MiniLM-L6-v2
+IMAGE_EMB_DIM = 512  # clip-ViT-B-32 (index-time screenshot encoding only)
+FUSED_EMB_DIM = TEXT_EMB_DIM + IMAGE_EMB_DIM
 
 _engine = None
 _chroma_client = None
@@ -50,12 +55,20 @@ def _get_clip_model():
 def _fuse_embeddings(text_emb: np.ndarray, image_emb: np.ndarray | None) -> np.ndarray:
     """Concatenate normalised text + image embeddings, then normalise the result.
 
+    Index time: steps with screenshots pass a CLIP image embedding; steps without
+    use a zero image half. Query time: always pass image_emb=None (see
+    retriever._make_query_embedding) for text-first retrieval.
+
     Final normalisation ensures consistent unit-norm vectors across the whole
     collection regardless of whether a step has an image. This makes L2 distance
     equivalent to cosine distance and the MAX_DISTANCE threshold reliable.
     """
     t = text_emb / np.linalg.norm(text_emb)
-    i = np.zeros(512, dtype=np.float32) if image_emb is None else image_emb / np.linalg.norm(image_emb)
+    i = (
+        np.zeros(IMAGE_EMB_DIM, dtype=np.float32)
+        if image_emb is None
+        else image_emb / np.linalg.norm(image_emb)
+    )
     fused = np.concatenate([t, i])
     return fused / np.linalg.norm(fused)
 
