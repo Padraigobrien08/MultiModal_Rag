@@ -5,11 +5,11 @@ Usage: python scripts/ingest_corpus.py [--api http://localhost:8000]
 """
 import argparse
 import json
-import time
 import sys
-from pathlib import Path
-import urllib.request
+import time
 import urllib.error
+import urllib.request
+from pathlib import Path
 
 BASE_DIR = Path(__file__).parent
 
@@ -65,7 +65,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--api", default="http://localhost:8000")
     parser.add_argument("--skip-existing", action="store_true", default=True)
-    parser.add_argument("--sequential", action="store_true", help="Submit one at a time (avoids rate limits)")
+    parser.add_argument(
+        "--sequential", action="store_true", help="Submit one at a time (avoids rate limits)"
+    )
     args = parser.parse_args()
 
     corpus_path = BASE_DIR / "stripe_corpus.json"

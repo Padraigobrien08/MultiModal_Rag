@@ -32,8 +32,14 @@ _GAP_TOOL = {
         "type": "object",
         "properties": {
             "topic":           {"type": "string", "description": "Short label, 2–5 words"},
-            "description":     {"type": "string", "description": "What tutorial content would fill this gap, 1–2 sentences"},
-            "suggested_title": {"type": "string", "description": "A tutorial title that would answer these queries"},
+            "description":     {
+                "type": "string",
+                "description": "What tutorial content would fill this gap, 1–2 sentences",
+            },
+            "suggested_title": {
+                "type": "string",
+                "description": "A tutorial title that would answer these queries",
+            },
             "search_terms": {
                 "type": "array",
                 "items": {"type": "string"},
@@ -178,8 +184,9 @@ def detect_gaps(force: bool = False) -> list[dict]:
         return _cache
 
     import anthropic
+
     from stepwise.config import settings
-    from stepwise.indexing.indexer import get_db_session, _get_text_model
+    from stepwise.indexing.indexer import _get_text_model, get_db_session
 
     with get_db_session() as session:
         freq_map = _collect_poor_queries(session)

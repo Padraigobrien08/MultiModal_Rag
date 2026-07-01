@@ -4,8 +4,8 @@ Google Drive ingestion module.
 Downloads video files from a Drive folder, transcribes with Whisper,
 extracts frames with ffmpeg. Returns the same artifact shape as ingest_youtube().
 """
-import subprocess
 import hashlib
+import subprocess
 from pathlib import Path
 
 from stepwise.config import settings
@@ -46,7 +46,9 @@ def list_drive_files(folder_id: str, token_path: Path, recursive: bool = False) 
     return results
 
 
-def _list_drive_files_recursive(service, folder_id: str, results: list[dict], recursive: bool) -> None:
+def _list_drive_files_recursive(
+    service, folder_id: str, results: list[dict], recursive: bool
+) -> None:
     page_token = None
     while True:
         resp = service.files().list(
@@ -68,7 +70,9 @@ def _list_drive_files_recursive(service, folder_id: str, results: list[dict], re
             break
 
 
-def list_drive_changes(folder_id: str, token_path: Path, since: str, recursive: bool = False) -> list[dict]:
+def list_drive_changes(
+    folder_id: str, token_path: Path, since: str, recursive: bool = False
+) -> list[dict]:
     """
     Return video files modified after `since` (ISO 8601 string, e.g. '2025-01-01T00:00:00Z').
     """
@@ -103,7 +107,6 @@ def _download_drive_file(file_id: str, dest_path: Path, token_path: Path) -> Non
 
 def _whisper_transcribe_file(video_path: Path, audio_dir: Path) -> list[dict]:
     """Transcribe a local video file using Whisper. Returns [{text, start, duration}]."""
-    import whisper
 
     audio_path = audio_dir / "audio.mp3"
     if not audio_path.exists():

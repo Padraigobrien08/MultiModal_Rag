@@ -2,19 +2,18 @@ import re
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from urllib.parse import urlparse, parse_qs
-from fastapi import FastAPI, BackgroundTasks, HTTPException, UploadFile, File, Form
+from typing import Optional
+from urllib.parse import parse_qs, urlparse
+
+import chromadb
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from typing import Optional
-import chromadb
 
-from stepwise.models import JobDB, TutorialDB, StepDB, FeedbackDB, WatcherDB
+from stepwise.api.middleware import APIKeyMiddleware, RequestIDMiddleware
 from stepwise.config import settings
 from stepwise.indexing import get_db_session
-from stepwise.retrieval import query_steps, query_steps_stream
-from stepwise.api.middleware import APIKeyMiddleware, RequestIDMiddleware
 from stepwise.ingestion.tasks import (
     run_drive_ingestion,
     run_image_ingestion,
@@ -22,6 +21,8 @@ from stepwise.ingestion.tasks import (
     run_youtube_ingestion,
 )
 from stepwise.logging_config import setup_logging
+from stepwise.models import FeedbackDB, JobDB, TutorialDB, WatcherDB
+from stepwise.retrieval import query_steps, query_steps_stream
 
 
 @asynccontextmanager
@@ -274,7 +275,9 @@ def ingest_notion_endpoint(req: NotionIngestRequest, background_tasks: Backgroun
         session.add(JobDB(id=job_id, status="pending"))
         session.commit()
 
-    background_tasks.add_task(run_notion_ingestion_api, job_id, req.page_id, req.title, req.notion_token)
+    background_tasks.add_task(
+        run_notion_ingestion_api, job_id, req.page_id, req.title, req.notion_token
+    )
     return {"job_id": job_id}
 
 
@@ -371,6 +374,7 @@ def _poll_all_active(tasks) -> list[str]:
     FastAPI's BackgroundTasks and the scheduler's thread-pool shim.
     """
     import logging
+
     from stepwise.ingestion.watcher import poll_watcher
     total_jobs: list[str] = []
     with get_db_session() as session:
@@ -414,7 +418,9 @@ def poll_watcher_endpoint(watcher_id: str, background_tasks: BackgroundTasks) ->
 @app.post("/query")
 def query(req: QueryRequest) -> StreamingResponse:
     return StreamingResponse(
-        query_steps_stream(req.query, tutorial_id=req.tutorial_id, top_k=req.top_k, history=req.history),
+        query_steps_stream(
+            req.query, tutorial_id=req.tutorial_id, top_k=req.top_k, history=req.history
+        ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
@@ -452,10 +458,12 @@ def reindex_all(background_tasks: BackgroundTasks) -> dict:
 def _run_reindex() -> None:
     import logging
     log = logging.getLogger(__name__)
+    from pathlib import Path
+
+    from PIL import Image
+
     from stepwise.indexing.indexer import _fuse_embeddings, _get_chroma
     from stepwise.ml.registry import get_clip_encoder, get_text_encoder
-    from pathlib import Path
-    from PIL import Image
 
     with get_db_session() as session:
         tutorials = session.query(TutorialDB).all()
@@ -513,48 +521,59 @@ def _run_reindex() -> None:
 
 @app.get("/admin/query-logs")
 def get_query_logs(limit: int = 500, since: Optional[str] = None) -> list:
-    from stepwise.models import QueryLogDB
     from datetime import timedelta
+
+    from stepwise.models import QueryLogDB
     with get_db_session() as session:
         q = session.query(QueryLogDB).order_by(QueryLogDB.created_at.desc())
         if since:
-            delta = {"24h": timedelta(hours=24), "7d": timedelta(days=7), "30d": timedelta(days=30)}.get(since)
+            delta = {
+                "24h": timedelta(hours=24),
+                "7d": timedelta(days=7),
+                "30d": timedelta(days=30),
+            }.get(since)
             if delta:
                 q = q.filter(QueryLogDB.created_at >= datetime.now(timezone.utc) - delta)
         logs = q.limit(limit).all()
 
         # Batch-load feedback keyed by query_text
-        query_texts = [l.query_text for l in logs]
-        fb_rows = session.query(FeedbackDB).filter(FeedbackDB.query.in_(query_texts)).all() if query_texts else []
+        query_texts = [entry.query_text for entry in logs]
+        fb_rows = (
+            session.query(FeedbackDB).filter(FeedbackDB.query.in_(query_texts)).all()
+            if query_texts else []
+        )
         fb_by_query: dict[str, list] = {}
         for fb in fb_rows:
-            fb_by_query.setdefault(fb.query, []).append({"step_id": fb.step_id, "helpful": fb.helpful > 0})
+            fb_by_query.setdefault(fb.query, []).append(
+                {"step_id": fb.step_id, "helpful": fb.helpful > 0}
+            )
 
         return [
             {
-                "id": l.id,
-                "query_text": l.query_text,
-                "hypothetical_text": l.hypothetical_text,
-                "tutorial_scoped": l.tutorial_scoped,
-                "tutorial_ids_searched": l.tutorial_ids_searched,
-                "steps_returned": l.steps_returned,
-                "answer_text": l.answer_text,
-                "history_length": l.history_length,
-                "latency_hyde_ms": l.latency_hyde_ms,
-                "latency_retrieval_ms": l.latency_retrieval_ms,
-                "latency_synthesis_ms": l.latency_synthesis_ms,
-                "total_latency_ms": l.total_latency_ms,
-                "created_at": l.created_at.isoformat() if l.created_at else None,
-                "feedback": fb_by_query.get(l.query_text, []),
+                "id": entry.id,
+                "query_text": entry.query_text,
+                "hypothetical_text": entry.hypothetical_text,
+                "tutorial_scoped": entry.tutorial_scoped,
+                "tutorial_ids_searched": entry.tutorial_ids_searched,
+                "steps_returned": entry.steps_returned,
+                "answer_text": entry.answer_text,
+                "history_length": entry.history_length,
+                "latency_hyde_ms": entry.latency_hyde_ms,
+                "latency_retrieval_ms": entry.latency_retrieval_ms,
+                "latency_synthesis_ms": entry.latency_synthesis_ms,
+                "total_latency_ms": entry.total_latency_ms,
+                "created_at": entry.created_at.isoformat() if entry.created_at else None,
+                "feedback": fb_by_query.get(entry.query_text, []),
             }
-            for l in logs
+            for entry in logs
         ]
 
 
 @app.get("/admin/stats")
 def get_admin_stats() -> dict:
-    from stepwise.models import QueryLogDB
     from datetime import timedelta
+
+    from stepwise.models import QueryLogDB
     with get_db_session() as session:
         cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
         queries_24h = session.query(QueryLogDB).filter(QueryLogDB.created_at >= cutoff).count()

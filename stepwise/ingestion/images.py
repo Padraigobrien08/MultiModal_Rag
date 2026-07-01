@@ -1,5 +1,5 @@
-import zipfile
 import io
+import zipfile
 from pathlib import Path
 
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}

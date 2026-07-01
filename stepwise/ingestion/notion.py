@@ -14,6 +14,7 @@ Embedded YouTube/Loom videos are extracted and returned separately
 so callers can decide whether to queue them for full video ingestion.
 """
 from __future__ import annotations
+
 import re
 
 
@@ -280,7 +281,9 @@ def ingest_notion_page(page_id: str, token: str) -> dict:
     }
 
 
-def list_notion_database(database_id: str, token: str, modified_after: str | None = None) -> list[dict]:
+def list_notion_database(
+    database_id: str, token: str, modified_after: str | None = None
+) -> list[dict]:
     """
     List pages in a Notion database, optionally filtered by last_edited_time.
     Returns list of {id, title, last_edited_time}.

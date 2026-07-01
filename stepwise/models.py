@@ -1,9 +1,21 @@
-from sqlalchemy import create_engine, Column, String, Integer, Float, Text, ForeignKey, JSON, DateTime, Boolean
-from sqlalchemy.orm import DeclarativeBase, relationship
 from datetime import datetime, timezone
-from pydantic import BaseModel
-from typing import Optional
 from pathlib import Path
+from typing import Optional
+
+from pydantic import BaseModel
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    create_engine,
+)
+from sqlalchemy.orm import DeclarativeBase, relationship
 
 
 class Base(DeclarativeBase):
@@ -67,7 +79,8 @@ class WatcherDB(Base):
     __tablename__ = "watchers"
 
     id = Column(String, primary_key=True)
-    source_type = Column(String, nullable=False)  # youtube_channel | drive_folder | notion_page | notion_database
+    # youtube_channel | drive_folder | notion_page | notion_database
+    source_type = Column(String, nullable=False)
     source_id = Column(String, nullable=False)     # channel_id, folder_id, page_id, database_id
     label = Column(String)
     last_seen_at = Column(String, nullable=True)   # ISO 8601 — last time we detected new content

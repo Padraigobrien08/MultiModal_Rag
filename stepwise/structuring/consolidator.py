@@ -1,4 +1,5 @@
 import anthropic
+
 from stepwise.config import settings
 from stepwise.models import Step
 
@@ -15,10 +16,19 @@ CONSOLIDATE_TOOL = {
                 "items": {
                     "type": "object",
                     "properties": {
-                        "source_step_number": {"type": "integer", "description": "Step number from the original list to inherit visual/timestamp from"},
+                        "source_step_number": {
+                            "type": "integer",
+                            "description": (
+                                "Step number from the original list to inherit "
+                                "visual/timestamp from"
+                            ),
+                        },
                         "title": {"type": "string"},
                         "description": {"type": "string"},
-                        "action_type": {"type": "string", "enum": ["click", "configure", "navigate", "explain", "verify"]},
+                        "action_type": {
+                            "type": "string",
+                            "enum": ["click", "configure", "navigate", "explain", "verify"],
+                        },
                     },
                     "required": ["source_step_number", "title", "description", "action_type"],
                 },
@@ -28,16 +38,19 @@ CONSOLIDATE_TOOL = {
     },
 }
 
-SYSTEM_PROMPT = """\
-You are a tutorial editor. You will receive a list of raw steps extracted from a tutorial video and must consolidate them into a clean, minimal set.
-
-Rules:
-- Target exactly the number of steps specified by the user.
-- Merge adjacent steps that are part of the same action.
-- Drop non-instructional steps: intros, outros, "like and subscribe", filler commentary.
-- Drop duplicate or near-duplicate steps.
-- Each output step must reference a source_step_number from the input (the step whose screenshot and timestamp should be used).
-- Descriptions should be clear and actionable in 1-3 sentences."""
+SYSTEM_PROMPT = (
+    "You are a tutorial editor. You will receive a list of raw steps extracted from a "
+    "tutorial video and must consolidate them into a clean, minimal set.\n"
+    "\n"
+    "Rules:\n"
+    "- Target exactly the number of steps specified by the user.\n"
+    "- Merge adjacent steps that are part of the same action.\n"
+    '- Drop non-instructional steps: intros, outros, "like and subscribe", filler commentary.\n'
+    "- Drop duplicate or near-duplicate steps.\n"
+    "- Each output step must reference a source_step_number from the input (the step whose "
+    "screenshot and timestamp should be used).\n"
+    "- Descriptions should be clear and actionable in 1-3 sentences."
+)
 
 
 def _get_client() -> anthropic.Anthropic:
@@ -66,7 +79,10 @@ def consolidate_steps(steps: list[Step], target_count: int) -> list[Step]:
         tool_choice={"type": "tool", "name": "consolidate_steps"},
         messages=[{
             "role": "user",
-            "content": f"Consolidate these {len(steps)} steps into approximately {target_count} steps.\n\n{steps_text}",
+            "content": (
+                f"Consolidate these {len(steps)} steps into approximately "
+                f"{target_count} steps.\n\n{steps_text}"
+            ),
         }],
     )
 

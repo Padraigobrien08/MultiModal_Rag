@@ -16,10 +16,10 @@ Flags:
 """
 import argparse
 import json
-import urllib.request
 import urllib.error
-from pathlib import Path
+import urllib.request
 from datetime import datetime
+from pathlib import Path
 
 BASE_DIR = Path(__file__).parent
 
