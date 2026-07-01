@@ -1,0 +1,57 @@
+name: Feature request
+description: Suggest an idea or improvement for Stepwise
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion! Please search
+        [existing issues](https://github.com/Padraigobrien08/MultiModal_Rag/issues)
+        first to avoid duplicates.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the motivation or the use case. What are you trying to do?
+      placeholder: I'm always frustrated when ...
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What you'd like to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any alternative solutions or workarounds you've considered.
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of Stepwise would this affect?
+      options:
+        - Backend / API
+        - Ingestion (YouTube / Drive / Notion / images)
+        - Retrieval / query
+        - Frontend (web)
+        - Zendesk app
+        - Other / not sure
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Anything else — mockups, links, examples.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Confirmations
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
