@@ -16,10 +16,10 @@ Flags:
 """
 import argparse
 import json
-import urllib.request
 import urllib.error
-from pathlib import Path
+import urllib.request
 from datetime import datetime
+from pathlib import Path
 
 BASE_DIR = Path(__file__).parent
 
@@ -149,7 +149,7 @@ def main():
             print(f"  💥 ERROR:   {len(errors):2d}")
         print(f"\n  Pass rate:     {pass_rate:.0f}%")
         print(f"  Hit rate:      {hit_rate:.0f}%  (pass + partial)")
-        print(f"  Target:        70% pass rate")
+        print("  Target:        70% pass rate")
         print()
         if pass_rate >= 70:
             print("  🟢 PHASE 1 EXIT CRITERIA MET — ready to build on top")
@@ -161,7 +161,7 @@ def main():
     # By topic breakdown
     if counted:
         topics = sorted(set(s["topic"] for s in counted))
-        print(f"\n  By topic:")
+        print("\n  By topic:")
         for topic in topics:
             t_scores = [s for s in counted if s["topic"] == topic]
             t_pass   = sum(1 for s in t_scores if s["score"] == "PASS")
@@ -169,7 +169,7 @@ def main():
 
     # Misses detail
     if misses:
-        print(f"\n  Misses to investigate:")
+        print("\n  Misses to investigate:")
         for s in misses:
             note = f"  — {s['note']}" if s["note"] else ""
             print(f"    {s['id']}  {s['query']}{note}")

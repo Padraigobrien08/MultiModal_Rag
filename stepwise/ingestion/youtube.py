@@ -1,8 +1,9 @@
+import re
 import subprocess
 from pathlib import Path
+
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import NoTranscriptFound, TranscriptsDisabled
-import re
 
 from stepwise.config import settings
 from stepwise.ingestion._utils import dedup_frames
@@ -29,7 +30,6 @@ def _get_transcript(video_id: str) -> list[dict]:
 
 
 def _whisper_transcribe(video_id: str) -> list[dict]:
-    import whisper
 
     video_dir = settings.frames_dir / video_id
     audio_path = video_dir / "audio.mp3"
@@ -75,7 +75,8 @@ def _extract_frames(video_id: str, output_dir: Path, interval: int) -> list[dict
         subprocess.run(
             [
                 "yt-dlp",
-                "-f", "bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]/best[ext=mp4][height<=720]",
+                "-f",
+                "bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]/best[ext=mp4][height<=720]",
                 "--merge-output-format", "mp4",
                 "-o", str(video_path),
                 f"https://www.youtube.com/watch?v={video_id}",

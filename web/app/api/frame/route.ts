@@ -1,7 +1,7 @@
 import { readFile } from "fs/promises";
 import path from "path";
 
-const DATA_DIR = path.resolve(process.env.DATA_DIR ?? "../data");
+const DATA_DIR = path.resolve(/*turbopackIgnore: true*/ process.env.DATA_DIR ?? "../data");
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

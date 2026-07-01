@@ -14,6 +14,7 @@ Embedded YouTube/Loom videos are extracted and returned separately
 so callers can decide whether to queue them for full video ingestion.
 """
 from __future__ import annotations
+
 import re
 
 
@@ -100,14 +101,14 @@ def _block_to_markdown(block: dict, depth: int = 0) -> str:
     if btype == "quote":
         text = _rich_text_to_str(content.get("rich_text", []))
         inner = (text + child_md()).strip().splitlines()
-        return "\n".join(f"> {l}" for l in inner if l)
+        return "\n".join(f"> {line}" for line in inner if line)
 
     if btype == "callout":
         icon_data = content.get("icon", {})
         icon = (icon_data["emoji"] + " ") if icon_data.get("type") == "emoji" else ""
         text = _rich_text_to_str(content.get("rich_text", []))
         inner = (icon + text + child_md()).strip().splitlines()
-        return "\n".join(f"> {l}" for l in inner if l)
+        return "\n".join(f"> {line}" for line in inner if line)
 
     if btype == "code":
         lang = content.get("language", "")
@@ -280,7 +281,9 @@ def ingest_notion_page(page_id: str, token: str) -> dict:
     }
 
 
-def list_notion_database(database_id: str, token: str, modified_after: str | None = None) -> list[dict]:
+def list_notion_database(
+    database_id: str, token: str, modified_after: str | None = None
+) -> list[dict]:
     """
     List pages in a Notion database, optionally filtered by last_edited_time.
     Returns list of {id, title, last_edited_time}.

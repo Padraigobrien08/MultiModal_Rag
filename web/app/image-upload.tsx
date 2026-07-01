@@ -63,7 +63,7 @@ export function ImageUpload({ onJobStarted, disabled }: Props) {
       <div
         onDragOver={e => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
-        onDrop={e => { e.preventDefault(); setDragging(false); e.dataTransfer.files.length && addFiles(e.dataTransfer.files); }}
+        onDrop={e => { e.preventDefault(); setDragging(false); if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files); }}
         onClick={() => fileInputRef.current?.click()}
         className={`relative rounded-lg border-2 border-dashed p-8 text-center transition-all cursor-pointer ${
           dragging ? "border-primary bg-primary/5" : "border-border/50 hover:border-border hover:bg-white/[0.02]"

@@ -13,12 +13,14 @@ Supported source types:
 """
 from __future__ import annotations
 
-import uuid
 import logging
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.request import urlopen
 from xml.etree import ElementTree
+
+from stepwise.models import WatcherDB
 
 log = logging.getLogger(__name__)
 
@@ -65,8 +67,8 @@ def _fetch_youtube_channel(watcher: "WatcherDB") -> list[dict]:
 
 
 def _fetch_drive_folder(watcher: "WatcherDB") -> list[dict]:
-    from stepwise.ingestion.drive import list_drive_changes, list_drive_files
     from stepwise.config import settings
+    from stepwise.ingestion.drive import list_drive_changes, list_drive_files
     cfg = watcher.config_json or {}
     token_path = Path(cfg.get("token_path") or str(settings.drive_token_path))
     recursive = cfg.get("recursive", False)
@@ -145,7 +147,7 @@ def poll_watcher(watcher: "WatcherDB", session, background_tasks) -> list[str]:
     Check a single watcher for new content. Enqueues background ingestion jobs
     for items not already in the tutorials table. Returns list of new job IDs.
     """
-    from stepwise.models import TutorialDB, JobDB
+    from stepwise.models import JobDB, TutorialDB
 
     fetcher = _FETCHERS.get(watcher.source_type)
     if not fetcher:

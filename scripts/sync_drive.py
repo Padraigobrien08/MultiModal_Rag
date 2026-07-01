@@ -17,9 +17,9 @@ import argparse
 import json
 import sys
 import time
-from pathlib import Path
-import urllib.request
 import urllib.error
+import urllib.request
+from pathlib import Path
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -54,7 +54,11 @@ def poll_job(api: str, job_id: str, label: str) -> bool:
         done   = data.get("segments_done")
         total  = data.get("segments_total")
 
-        progress = f" [{done}/{total} segs]" if stage == "structuring" and total else (f" [{stage}]" if stage else "")
+        progress = (
+            f" [{done}/{total} segs]"
+            if stage == "structuring" and total
+            else (f" [{stage}]" if stage else "")
+        )
         print(f"\r  {'.' * (dots % 4):<4} {status}{progress}   ", end="", flush=True)
         dots += 1
 
@@ -129,7 +133,12 @@ def main():
         sys.exit(1)
 
     try:
-        from stepwise.ingestion.drive import list_drive_files, ingest_drive_file, ingest_loom_url, LOOM_DOMAIN
+        from stepwise.ingestion.drive import (
+            LOOM_DOMAIN,
+            ingest_drive_file,
+            ingest_loom_url,
+            list_drive_files,
+        )
     except ImportError as e:
         print(f"ERROR: Missing dependency: {e}")
         print("Run:  pip install google-api-python-client google-auth-oauthlib")
@@ -142,7 +151,7 @@ def main():
         print(f"ERROR: Cannot reach API at {args.api}")
         sys.exit(1)
 
-    print(f"Stepwise Drive Sync")
+    print("Stepwise Drive Sync")
     print(f"Folder: {args.folder_id}")
     print(f"API:    {args.api}")
     if args.dry_run:
@@ -190,7 +199,7 @@ def main():
             pass
 
         # Ingest: download + transcribe + extract frames locally, then submit to API
-        print(f"  Downloading and processing locally...")
+        print("  Downloading and processing locally...")
         try:
             is_loom = LOOM_DOMAIN in source_url
             if is_loom:

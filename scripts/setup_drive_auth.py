@@ -14,8 +14,8 @@ Requirements:
 This script opens a browser for authorization and saves the token to
 data/drive_token.json for use by sync_drive.py.
 """
-from pathlib import Path
 import sys
+from pathlib import Path
 
 CREDENTIALS_PATH = Path("data/drive_credentials.json")
 TOKEN_PATH = Path("data/drive_token.json")
@@ -47,7 +47,10 @@ Then re-run this script.
     try:
         from google_auth_oauthlib.flow import InstalledAppFlow
     except ImportError:
-        print("Missing dependency. Run:\n  pip install google-auth-oauthlib google-api-python-client")
+        print(
+            "Missing dependency. Run:\n"
+            "  pip install google-auth-oauthlib google-api-python-client"
+        )
         sys.exit(1)
 
     TOKEN_PATH.parent.mkdir(parents=True, exist_ok=True)

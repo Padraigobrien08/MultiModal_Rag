@@ -3,6 +3,7 @@ Filter out trivial/non-actionable steps that slip through from video outros,
 intros, and filler content.
 """
 import re
+
 from stepwise.models import Step
 
 # Patterns that indicate a non-actionable step

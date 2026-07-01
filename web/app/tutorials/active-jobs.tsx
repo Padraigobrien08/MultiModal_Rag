@@ -147,17 +147,6 @@ export function ActiveJobs() {
   const router = useRouter();
   const prevDoneIds = useRef(new Set<string>());
 
-  const fetchJobs = useCallback(async () => {
-    try {
-      const res = await fetch("/api/jobs?status=pending,running,error", { cache: "no-store" });
-      if (!res.ok) return;
-      const data: Job[] = await res.json();
-      setJobs(data);
-    } catch {
-      // silently ignore
-    }
-  }, []);
-
   // Also check for newly-completed jobs to trigger a library refresh
   const fetchWithCompletion = useCallback(async () => {
     try {
@@ -180,7 +169,7 @@ export function ActiveJobs() {
   }, [router]);
 
   useEffect(() => {
-    fetchWithCompletion();
+    void Promise.resolve().then(() => fetchWithCompletion());
     const id = setInterval(fetchWithCompletion, 3000);
     return () => clearInterval(id);
   }, [fetchWithCompletion]);

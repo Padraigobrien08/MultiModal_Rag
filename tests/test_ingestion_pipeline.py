@@ -47,8 +47,12 @@ class TestFinalizeSteps:
             _step(1, "Save file"),
             _step(2, "Save file"),
         ]
-        with patch("stepwise.ingestion.pipeline.deduplicate_steps", side_effect=lambda s: s[:1]) as dedup:
-            with patch("stepwise.ingestion.pipeline.filter_trivial_steps", side_effect=lambda s: s) as filt:
+        with patch(
+            "stepwise.ingestion.pipeline.deduplicate_steps", side_effect=lambda s: s[:1]
+        ) as dedup:
+            with patch(
+                "stepwise.ingestion.pipeline.filter_trivial_steps", side_effect=lambda s: s
+            ) as filt:
                 result = finalize_steps(steps, JobTracker(None))
         assert len(result) == 1
         dedup.assert_called_once()
@@ -60,8 +64,12 @@ class TestRunIngestionPipeline:
         segments = [_segment(), _segment("next part")]
         fake_steps = [_step(1), _step(2)]
 
-        with patch("stepwise.ingestion.pipeline.structure_segments", return_value=fake_steps) as struct:
-            with patch("stepwise.ingestion.pipeline.finalize_steps", return_value=fake_steps) as fin:
+        with patch(
+            "stepwise.ingestion.pipeline.structure_segments", return_value=fake_steps
+        ) as struct:
+            with patch(
+                "stepwise.ingestion.pipeline.finalize_steps", return_value=fake_steps
+            ) as fin:
                 with patch("stepwise.ingestion.pipeline.index_tutorial_result") as index:
                     with patch("stepwise.ingestion.pipeline.align_segments") as align:
                         tutorial = run_ingestion_pipeline(

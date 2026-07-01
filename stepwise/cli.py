@@ -1,8 +1,8 @@
 import uuid
+
 import typer
 from rich.console import Console
 from rich.table import Table
-from rich import print as rprint
 
 app = typer.Typer(help="Stepwise — turn tutorial videos into queryable steps")
 console = Console()
@@ -11,7 +11,6 @@ console = Console()
 @app.command()
 def ingest(url: str, title: str = typer.Option(None, help="Optional title override")):
     """Ingest a YouTube tutorial URL and index its steps."""
-    import uuid
 
     from stepwise.ingestion import ingest_youtube
     from stepwise.ingestion.pipeline import run_ingestion_pipeline, video_consolidation_target

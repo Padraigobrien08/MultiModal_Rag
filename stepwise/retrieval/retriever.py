@@ -74,7 +74,9 @@ def _hypothetical_step(query: str, history: list[dict]) -> str:
 
 # ── Tutorial pre-filter ───────────────────────────────────────────────────────
 
-def _relevant_tutorial_ids(query_embedding: list[float], exclude_id: str | None) -> list[str] | None:
+def _relevant_tutorial_ids(
+    query_embedding: list[float], exclude_id: str | None
+) -> list[str] | None:
     """Return tutorial IDs to restrict search to, or None (search all).
 
     Queries the tutorial_centroids collection. If no centroid is close enough,
@@ -121,7 +123,10 @@ def _chromadb_lookup(
     top_k: int,
     history: list[dict],
 ) -> tuple[list[str], list[dict], list[float], dict]:
-    """Return (docs, metas, distances, timing_meta): HyDE → pre-filter → fetch → cross-encode → dedup."""
+    """Return (docs, metas, distances, timing_meta).
+
+    Pipeline: HyDE → pre-filter → fetch → cross-encode → dedup.
+    """
     t0 = time.monotonic()
 
     hypo = _hypothetical_step(query, history)
@@ -235,7 +240,9 @@ def _fetch_tutorial_info(metas: list[dict]) -> dict[str, dict]:
     return info
 
 
-def _build_steps_out(docs: list[str], metas: list[dict], tutorial_info: dict[str, dict]) -> list[dict]:
+def _build_steps_out(
+    docs: list[str], metas: list[dict], tutorial_info: dict[str, dict]
+) -> list[dict]:
     return [
         {
             "step_number": m["step_number"],

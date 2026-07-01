@@ -43,7 +43,7 @@ export function LibrarySidebar({ onClose, scopedId, onScopeTutorial, refreshKey 
     setLoading(false);
   }
 
-  useEffect(() => { fetchAll(); }, [refreshKey]);
+  useEffect(() => { void Promise.resolve().then(() => fetchAll()); }, [refreshKey]);
 
   useEffect(() => {
     const interval = setInterval(async () => {

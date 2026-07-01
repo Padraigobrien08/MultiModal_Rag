@@ -16,7 +16,8 @@ class Settings(BaseSettings):
 
     frame_interval_seconds: int = 5
     embedding_model: str = "all-MiniLM-L6-v2"
-    # Cheaper model for high-volume schema-bound structuring; Sonnet used for consolidation/retrieval
+    # Cheaper model for high-volume schema-bound structuring;
+    # Sonnet used for consolidation/retrieval
     structuring_model: str = "claude-haiku-4-5-20251001"
     drive_token_path: Path = Path("./data/drive_token.json")
 

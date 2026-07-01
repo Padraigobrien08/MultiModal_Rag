@@ -22,10 +22,22 @@ EXTRACT_STEPS_TOOL = {
                 "items": {
                     "type": "object",
                     "properties": {
-                        "title": {"type": "string", "description": "Short action title, max 10 words"},
-                        "description": {"type": "string", "description": "Clear instruction a user can follow, 1-3 sentences"},
-                        "action_type": {"type": "string", "enum": ["click", "configure", "navigate", "explain", "verify"]},
-                        "confidence": {"type": "number", "description": "0.0-1.0, how clearly this is a distinct step"},
+                        "title": {
+                            "type": "string",
+                            "description": "Short action title, max 10 words",
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Clear instruction a user can follow, 1-3 sentences",
+                        },
+                        "action_type": {
+                            "type": "string",
+                            "enum": ["click", "configure", "navigate", "explain", "verify"],
+                        },
+                        "confidence": {
+                            "type": "number",
+                            "description": "0.0-1.0, how clearly this is a distinct step",
+                        },
                     },
                     "required": ["title", "description", "action_type", "confidence"],
                 },
@@ -36,9 +48,10 @@ EXTRACT_STEPS_TOOL = {
 }
 
 SYSTEM_PROMPT = (
-    "You are a tutorial analysis assistant. Given a transcript segment and/or screenshots from a tutorial, "
-    "extract the procedural steps a user must perform. If only screenshots are provided with no transcript, "
-    "infer the steps from what is visible in the UI. Call the extract_steps tool with your findings."
+    "You are a tutorial analysis assistant. Given a transcript segment and/or "
+    "screenshots from a tutorial, extract the procedural steps a user must perform. "
+    "If only screenshots are provided with no transcript, infer the steps from what "
+    "is visible in the UI. Call the extract_steps tool with your findings."
 )
 
 USER_TEMPLATE = "Transcript segment ({start:.0f}s – {end:.0f}s):\n{transcript}"
@@ -74,11 +87,17 @@ def _build_messages(segment: Segment, image_index: int = 0, total_images: int = 
         if Path(frame_path).exists():
             content.append({
                 "type": "image",
-                "source": {"type": "base64", "media_type": _media_type(frame_path), "data": _encode_image(frame_path)},
+                "source": {
+                    "type": "base64",
+                    "media_type": _media_type(frame_path),
+                    "data": _encode_image(frame_path),
+                },
             })
 
     if segment.transcript.strip():
-        text = USER_TEMPLATE.format(start=segment.time_start, end=segment.time_end, transcript=segment.transcript)
+        text = USER_TEMPLATE.format(
+            start=segment.time_start, end=segment.time_end, transcript=segment.transcript
+        )
     else:
         text = IMAGE_ONLY_TEMPLATE.format(index=image_index, total=total_images)
 
@@ -98,7 +117,9 @@ def structure_segment(tutorial_id: str, segment: Segment, step_number_start: int
                 system=_SYSTEM_MESSAGE,
                 tools=[EXTRACT_STEPS_TOOL],
                 tool_choice={"type": "tool", "name": "extract_steps"},
-                messages=_build_messages(segment, image_index=image_index, total_images=total_images),
+                messages=_build_messages(
+                    segment, image_index=image_index, total_images=total_images
+                ),
                 betas=["prompt-caching-2024-07-31"],
             )
             break
