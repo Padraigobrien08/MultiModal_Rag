@@ -170,20 +170,22 @@ def poll_watcher(watcher: "WatcherDB", session, background_tasks) -> list[str]:
 
         # Dispatch the right background task per source type
         if watcher.source_type == "youtube_channel":
-            from stepwise.api.app import _run_ingestion
-            background_tasks.add_task(_run_ingestion, job_id, item["url"], item["title"])
+            from stepwise.ingestion.tasks import run_youtube_ingestion
+            background_tasks.add_task(run_youtube_ingestion, job_id, item["url"], item["title"])
 
         elif watcher.source_type == "drive_folder":
             cfg = watcher.config_json or {}
             meta = item["_drive_meta"]
+            from stepwise.ingestion.tasks import run_drive_ingestion_from_meta
             background_tasks.add_task(
-                _run_drive_ingestion_from_meta, job_id, meta, cfg["token_path"]
+                run_drive_ingestion_from_meta, job_id, meta, cfg["token_path"]
             )
 
         elif watcher.source_type in ("notion_database", "notion_page"):
             cfg = watcher.config_json or {}
+            from stepwise.ingestion.tasks import run_notion_ingestion
             background_tasks.add_task(
-                _run_notion_ingestion, job_id, item["id"], item["title"], cfg["notion_token"]
+                run_notion_ingestion, job_id, item["id"], item["title"], cfg["notion_token"]
             )
 
         new_job_ids.append(job_id)
@@ -198,39 +200,4 @@ def poll_watcher(watcher: "WatcherDB", session, background_tasks) -> list[str]:
     return new_job_ids
 
 
-# ---------------------------------------------------------------------------
-# Ingestion tasks called by the watcher
-# ---------------------------------------------------------------------------
-
-def _run_drive_ingestion_from_meta(job_id: str, file_meta: dict, token_path_str: str | None = None) -> None:
-    """Download + ingest a Drive file identified by its API metadata dict."""
-    from stepwise.ingestion.drive import ingest_drive_file
-    from stepwise.api.app import _run_drive_ingestion
-    from stepwise.config import settings
-
-    token_path = Path(token_path_str) if token_path_str else settings.drive_token_path
-    artifacts = ingest_drive_file(file_meta, token_path)
-    _run_drive_ingestion(job_id, {
-        "source_url": artifacts["url"],
-        "title": artifacts["title"],
-        "video_id": artifacts["video_id"],
-        "transcript": artifacts["transcript"],
-        "frames": artifacts["frames"],
-    })
-
-
-def _run_notion_ingestion(job_id: str, page_id: str, title: str, notion_token: str) -> None:
-    """Ingest a Notion page into the pipeline."""
-    from stepwise.ingestion.notion import ingest_notion_page
-    from stepwise.api.app import _run_drive_ingestion  # reuses the same align→structure→index path
-
-    artifacts = ingest_notion_page(page_id, notion_token)
-    _run_drive_ingestion(job_id, {
-        "source_url": artifacts["url"],
-        "title": title or artifacts["title"],
-        "video_id": artifacts["video_id"],
-        "transcript": artifacts["transcript"],
-        "frames": artifacts["frames"],
-        "source_type": "notion",
-        "embedded_video_urls": artifacts.get("embedded_video_urls", []),
-    })
+# Drive/Notion ingestion tasks live in stepwise.ingestion.tasks (shared with API).

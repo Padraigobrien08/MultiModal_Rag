@@ -8,6 +8,8 @@ to score each one. Outputs a summary report with pass rate.
 Usage:
   python scripts/run_eval.py [--api http://localhost:8000] [--auto]
 
+Uses POST /query/sync (JSON). The streaming endpoint is POST /query (SSE).
+
 Flags:
   --auto      Skip interactive scoring, just dump all results (for quick inspection)
   --top-k 3   Number of steps to retrieve per query (default 3)
@@ -44,7 +46,7 @@ def fmt_ts(s):
 
 
 def run_query(api: str, query: str, top_k: int) -> dict:
-    return post_json(f"{api}/query", {"query": query, "top_k": top_k})
+    return post_json(f"{api}/query/sync", {"query": query, "top_k": top_k})
 
 
 def print_result(result: dict, query_text: str):

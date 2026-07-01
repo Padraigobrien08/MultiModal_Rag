@@ -12,9 +12,10 @@ type Tutorial = {
   potential_duplicate_of: string | null;
 };
 
+import { fetchBackend } from "@/lib/backend";
+
 async function getTutorials(): Promise<Tutorial[]> {
-  const apiBase = process.env.API_BASE ?? "http://localhost:8000";
-  const res = await fetch(`${apiBase}/tutorials`, { cache: "no-store" });
+  const res = await fetchBackend("/tutorials", { cache: "no-store" });
   if (!res.ok) return [];
   return res.json();
 }

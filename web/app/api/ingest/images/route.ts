@@ -1,8 +1,8 @@
-const API_BASE = process.env.API_BASE ?? "http://localhost:8000";
+import { fetchBackend } from "@/lib/backend";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const res = await fetch(`${API_BASE}/ingest/images`, {
+  const res = await fetchBackend(`/ingest/images`, {
     method: "POST",
     body: formData,
   });

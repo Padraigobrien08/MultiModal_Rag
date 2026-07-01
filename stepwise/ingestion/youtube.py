@@ -42,8 +42,9 @@ def _whisper_transcribe(video_id: str) -> list[dict]:
             check=True, capture_output=True,
         )
 
-    model = whisper.load_model("base")
-    result = model.transcribe(str(audio_path), word_timestamps=False)
+    from stepwise.ml.registry import get_whisper_model
+
+    result = get_whisper_model().transcribe(str(audio_path), word_timestamps=False)
 
     return [
         {"text": seg["text"].strip(), "start": seg["start"], "duration": seg["end"] - seg["start"]}

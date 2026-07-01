@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, Clock, ExternalLink, ImageIcon, MessageSquare } from "lucide-react";
 import { notFound } from "next/navigation";
 import { EmbeddedVideos } from "./embedded-videos";
+import { fetchBackend } from "@/lib/backend";
 
 type Step = {
   id: string;
@@ -32,8 +33,7 @@ const ACTION_STYLE: Record<string, { border: string; text: string; bg: string }>
 };
 
 async function getTutorial(id: string): Promise<Tutorial | null> {
-  const apiBase = process.env.API_BASE ?? "http://localhost:8000";
-  const res = await fetch(`${apiBase}/tutorials/${id}`, { cache: "no-store" });
+  const res = await fetchBackend(`/tutorials/${id}`, { cache: "no-store" });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error("Failed to fetch tutorial");
   return res.json();

@@ -41,7 +41,7 @@ Support and onboarding knowledge is trapped in **video**. A 30-minute screencast
 
 | | |
 |---|---|
-| 🎥 **Genuinely multimodal** | Every step is embedded as a fused **text + CLIP-image** vector. A query can match on what was *said* **or** what was *shown* on screen. |
+| 🎥 **Multimodal structuring** | Claude reads transcript + screenshots at ingest time. Steps are indexed as fused **text + CLIP-image** vectors (896-dim); retrieval is **text-first** over visually enriched descriptions. |
 | 🧠 **HyDE retrieval** | Embeds a hypothetical *answer* instead of the question — closing the question↔instruction vocabulary gap. ([deep dive →](docs/hyde.md)) |
 | 🔁 **Auto-ingestion** | Watch a YouTube channel, Drive folder, or Notion database. New content is detected and ingested automatically — reactive becomes proactive. |
 | 🔍 **Gap detection** | Clusters queries the library *couldn't* answer well, names each gap with Claude, and suggests exactly what tutorial to record next. |
@@ -75,13 +75,13 @@ flowchart LR
     end
 
     subgraph Index
-        EMB[Text + CLIP<br/>fused embeddings]
+        EMB[Text + CLIP<br/>fused index vectors]
         CH[(ChromaDB)]
         SQL[(SQLite)]
     end
 
     subgraph Retrieval
-        HYDE[HyDE expansion]
+        HYDE[HyDE text embed<br/>zero visual half]
         PF[Tutorial<br/>pre-filter]
         CE[Cross-encoder<br/>re-rank]
         SYN[Claude synthesis<br/>streamed SSE]
@@ -116,11 +116,12 @@ download ─→ transcribe ─→ extract frames ─→ dedup frames ─→ alig
 ## The retrieval pipeline
 
 ```
-query ─→ HyDE ─→ embed ─→ tutorial pre-filter ─→ vector search ─→ cross-encoder ─→ dedup ─→ synthesize
-        (Haiku)         (centroid gate)        (ChromaDB)      (MiniLM rerank)         (Haiku, streamed)
+query ─→ HyDE ─→ text embed (384-d) + zero visual half ─→ tutorial pre-filter ─→ vector search ─→ cross-encoder ─→ dedup ─→ synthesize
+        (Haiku)              (896-d fused query vector)      (centroid gate)        (ChromaDB)      (MiniLM rerank)         (Haiku, streamed)
 ```
 
 - **HyDE** — Claude writes a hypothetical answer-shaped step; *that* gets embedded, not the raw question. Conversation history is included so follow-ups like *"how do I undo that?"* resolve correctly. ([why this works →](docs/hyde.md))
+- **Text-first retrieval** — query vectors use HyDE text + a **zero visual half** (no CLIP at query time). Visual context enters search through Claude-extracted step descriptions; screenshots are returned as evidence, not used for image-to-image matching. See [docs/hyde.md](docs/hyde.md) for the full embedding scheme.
 - **Tutorial pre-filter** — a per-tutorial **centroid** index gates the search: if one tutorial is clearly relevant, search is scoped to it; otherwise it falls back to the full corpus.
 - **Cross-encoder re-rank** — `ms-marco-MiniLM` re-scores the top candidates for precision the bi-encoder can't reach alone.
 - **Near-duplicate suppression** — steps ≥85% textually similar collapse to the best-ranked copy.
@@ -150,7 +151,7 @@ The design principle: **cut tokens, not modalities.** A transcript-only system w
 |---|---|
 | **API** | FastAPI · async background jobs · SSE streaming |
 | **LLM** | Claude (Haiku for volume, Sonnet for judgment) via tool-use |
-| **Embeddings** | `all-MiniLM-L6-v2` (384-dim text) + `clip-ViT-B-32` (512-dim image) → 896-dim fused |
+| **Embeddings** | `all-MiniLM-L6-v2` (384-dim text) + `clip-ViT-B-32` (512-dim image at index time) → 896-dim fused; queries use text + zero visual half |
 | **Vector store** | ChromaDB (steps + tutorial centroids) |
 | **Relational** | SQLite via SQLAlchemy (tutorials, steps, jobs, query logs, watchers, feedback) |
 | **Re-ranking** | `cross-encoder/ms-marco-MiniLM-L-6-v2` |
@@ -206,6 +207,7 @@ stepwise query "how do I configure an API key?"
 | `POST` | `/ingest/notion` | Ingest a Notion page (full block-tree parser) |
 | `POST` | `/ingest/images` | Ingest screenshots / a ZIP |
 | `POST` | `/query` | Ask a question — streamed SSE answer + steps |
+| `POST` | `/query/sync` | Same as `/query` but returns JSON `{answer, steps}` (eval, Zendesk) |
 | `GET` | `/tutorials` · `/tutorials/{id}` | Browse the library |
 | `POST` | `/watchers` · `POST /watchers/poll` | Manage & poll auto-ingestion sources |
 | `GET` | `/gaps?force=true` | Detect coverage gaps from query logs |
@@ -236,7 +238,7 @@ The endgame is a system that tells you *what to record next* and ingests it the 
    └──────────────────────────────────────────────────────────┘
 ```
 
-- **Watchers** (`/watchers`) track YouTube channels (via public RSS — no API key), Drive folders (modified-time diff), and Notion databases (last-edited filter). `POST /watchers/poll` is safe to wire to a cron.
+- **Watchers** (`/watchers`) track YouTube channels (via public RSS — no API key), Drive folders (modified-time diff), and Notion databases (last-edited filter). A built-in APScheduler job polls every active source on an interval (default 30 min) and auto-queues anything new — no external cron required. `POST /watchers/poll` triggers an immediate check.
 - **Gaps** (`/gaps`) embeds poorly-served queries, clusters them by cosine similarity, and asks Claude to name each gap with a suggested tutorial title and YouTube search terms.
 
 ---
@@ -253,6 +255,12 @@ Set via `.env` (see [`.env.example`](.env.example)):
 | `FRAME_INTERVAL_SECONDS` | `5` | Frame sampling interval |
 | `EMBEDDING_MODEL` | `all-MiniLM-L6-v2` | Text embedding model |
 | `DRIVE_TOKEN_PATH` | `./data/drive_token.json` | Google Drive OAuth token |
+| `WATCHER_POLL_ENABLED` | `true` | Run the auto-ingestion scheduler in-process |
+| `WATCHER_POLL_INTERVAL_MINUTES` | `30` | How often watched sources are polled |
+| `API_KEY` | *(unset)* | When set, require `X-API-Key` or `Authorization: Bearer` on all routes except `/health` and `/docs` |
+| `CORS_ORIGINS` | `*` | Comma-separated allowed origins, or `*` for local dev |
+
+When `API_KEY` is set, the **API**, **web BFF** (`API_KEY` in the Next.js server env — forwarded automatically via `web/lib/backend.ts`), **Zendesk sidebar** (optional `api_key` app setting), and scripts must include the key in requests. Leave it unset for local development.
 
 ---
 
@@ -289,7 +297,7 @@ python scripts/run_eval.py --auto          # dump results, no scoring
 
 ## Design philosophy
 
-> **Cut tokens, not modalities.** The cheapest system would read transcripts and stop there. Stepwise keeps the visual signal — the screenshots that show what the narration only points at — and engineers the *cost* down instead of engineering the *capability* away.
+> **Cut tokens, not modalities.** The cheapest system would read transcripts and stop there. Stepwise keeps the visual signal during **multimodal structuring** — Claude reads screenshots when extracting steps — and returns frame evidence with answers. Query-time search is text-first over those visually enriched descriptions.
 
 ---
 
