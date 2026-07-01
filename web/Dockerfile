@@ -24,6 +24,9 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
+# Standalone output is self-contained; run as the built-in unprivileged user.
+USER node
+
 EXPOSE 3000
 
 CMD ["node", "server.js"]
