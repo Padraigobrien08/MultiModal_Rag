@@ -2,7 +2,6 @@ import uuid
 import typer
 from rich.console import Console
 from rich.table import Table
-from rich import print as rprint
 
 app = typer.Typer(help="Stepwise — turn tutorial videos into queryable steps")
 console = Console()

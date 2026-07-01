@@ -72,7 +72,7 @@ def main():
     corpus = json.loads(corpus_path.read_text())
     videos = corpus["videos"]
 
-    print(f"Stepwise corpus ingestion")
+    print("Stepwise corpus ingestion")
     print(f"API: {args.api}")
     print(f"Videos: {len(videos)}")
     print("=" * 50)
@@ -109,7 +109,7 @@ def main():
 
         job_id = resp.get("job_id")
         if not job_id:
-            print(f"         ✗ No job_id in response")
+            print("         ✗ No job_id in response")
             results["failed"].append({"url": url, "error": "no job_id"})
             continue
 

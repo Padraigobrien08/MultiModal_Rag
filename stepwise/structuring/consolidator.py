@@ -1,4 +1,3 @@
-import json
 import anthropic
 from stepwise.config import settings
 from stepwise.models import Step

@@ -20,6 +20,8 @@ from pathlib import Path
 from urllib.request import urlopen
 from xml.etree import ElementTree
 
+from stepwise.models import WatcherDB
+
 log = logging.getLogger(__name__)
 
 _YT_RSS = "https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"

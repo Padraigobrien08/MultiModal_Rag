@@ -100,14 +100,14 @@ def _block_to_markdown(block: dict, depth: int = 0) -> str:
     if btype == "quote":
         text = _rich_text_to_str(content.get("rich_text", []))
         inner = (text + child_md()).strip().splitlines()
-        return "\n".join(f"> {l}" for l in inner if l)
+        return "\n".join(f"> {line}" for line in inner if line)
 
     if btype == "callout":
         icon_data = content.get("icon", {})
         icon = (icon_data["emoji"] + " ") if icon_data.get("type") == "emoji" else ""
         text = _rich_text_to_str(content.get("rich_text", []))
         inner = (icon + text + child_md()).strip().splitlines()
-        return "\n".join(f"> {l}" for l in inner if l)
+        return "\n".join(f"> {line}" for line in inner if line)
 
     if btype == "code":
         lang = content.get("language", "")

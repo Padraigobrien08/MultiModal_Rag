@@ -142,7 +142,7 @@ def main():
         print(f"ERROR: Cannot reach API at {args.api}")
         sys.exit(1)
 
-    print(f"Stepwise Drive Sync")
+    print("Stepwise Drive Sync")
     print(f"Folder: {args.folder_id}")
     print(f"API:    {args.api}")
     if args.dry_run:
@@ -190,7 +190,7 @@ def main():
             pass
 
         # Ingest: download + transcribe + extract frames locally, then submit to API
-        print(f"  Downloading and processing locally...")
+        print("  Downloading and processing locally...")
         try:
             is_loom = LOOM_DOMAIN in source_url
             if is_loom:

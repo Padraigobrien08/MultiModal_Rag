@@ -89,7 +89,6 @@ def _stable_id(drive_file_id: str) -> str:
 def _download_drive_file(file_id: str, dest_path: Path, token_path: Path) -> None:
     """Download a Drive file to dest_path using the Drive API."""
     from googleapiclient.http import MediaIoBaseDownload
-    import io
 
     service = _get_drive_service(token_path)
     request = service.files().get_media(fileId=file_id)

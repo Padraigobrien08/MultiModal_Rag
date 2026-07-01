@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { PenSquare, Trash2, MessageSquare } from "lucide-react";
 
 export type ConvSummary = {
@@ -18,7 +19,7 @@ type Props = {
 };
 
 export function HistorySidebar({ history, currentId, onNew, onSelect, onDelete }: Props) {
-  const now = Date.now();
+  const [now] = useState(() => Date.now());
   const groups = [
     { label: "Today",     items: history.filter(c => now - c.updatedAt < 86_400_000) },
     { label: "This week", items: history.filter(c => now - c.updatedAt >= 86_400_000 && now - c.updatedAt < 7 * 86_400_000) },
