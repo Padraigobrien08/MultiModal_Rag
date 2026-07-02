@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
@@ -23,13 +24,19 @@ class Settings(BaseSettings):
 
     # Auto-ingestion: poll watched sources on an interval inside the API process
     watcher_poll_enabled: bool = True
-    watcher_poll_interval_minutes: int = 30
+    # Bounded to [1, 1440] minutes (max once per day) to avoid runaway polling.
+    watcher_poll_interval_minutes: int = Field(default=30, ge=1, le=1440)
 
     # Optional API key — when set, clients must send X-API-Key (or Authorization: Bearer).
     # Leave unset for local development with no auth.
     api_key: str | None = None
 
-    # Comma-separated allowed origins, or "*" for all (default — convenient for local dev).
+    # Comma-separated allowed origins, or "*" for all.
+    # Default "*" is convenient for local dev, where the browser only talks to the
+    # Next.js BFF (same-origin) and never hits this API cross-origin directly.
+    # In production, set CORS_ORIGINS to your explicit frontend origin(s), e.g.
+    #   CORS_ORIGINS="https://app.example.com,https://admin.example.com"
+    # A wildcard combined with an API key is flagged at startup (see app.py).
     cors_origins: str = "*"
 
     def cors_origin_list(self) -> list[str]:

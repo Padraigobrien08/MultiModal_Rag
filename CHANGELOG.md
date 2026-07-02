@@ -14,6 +14,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and Dependabot configuration.
 - Stepwise-specific frontend README under `web/`.
 
+### Security
+
+- Hardened public API input validation: bounds on query length, `top_k`,
+  history size, list `limit`s, IDs, and uploads; watcher source types validated
+  via an enum; watcher poll interval bounded.
+- Mutable Pydantic/SQLAlchemy defaults replaced with `default_factory`/callables.
+- Constant-time API key comparison (`hmac.compare_digest`); production CORS
+  guidance plus a startup warning for wildcard-with-API-key.
+- Image ingestion now rejects oversized files, verifies image content before
+  writing, and guards against ZIP bombs (entry count, uncompressed size,
+  compression ratio).
+- Hardened the frame-serving route (`web/app/api/frame`) with `path.relative`
+  containment (blocking sibling-prefix bypasses), NUL-byte rejection, an
+  extension allow-list, and correct per-type content types — with real tests
+  (`web/app/api/frame/route.test.ts`, run from `pytest`).
+
 ### Changed
 
 - Hardened the backend `Dockerfile`: copy source before installing so the build

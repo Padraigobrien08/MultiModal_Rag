@@ -6,10 +6,10 @@ from typing import Optional
 from urllib.parse import parse_qs, urlparse
 
 import chromadb
-from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from stepwise.api.middleware import APIKeyMiddleware, RequestIDMiddleware
 from stepwise.config import settings
@@ -21,8 +21,18 @@ from stepwise.ingestion.tasks import (
     run_youtube_ingestion,
 )
 from stepwise.logging_config import setup_logging
-from stepwise.models import FeedbackDB, JobDB, TutorialDB, WatcherDB
+from stepwise.models import FeedbackDB, JobDB, TutorialDB, WatcherDB, WatcherSourceType
 from stepwise.retrieval import query_steps, query_steps_stream
+
+# Public-input bounds
+MAX_QUERY_LEN = 2000
+MAX_HISTORY_TURNS = 50
+MAX_URL_LEN = 2048
+MAX_TITLE_LEN = 500
+MAX_ID_LEN = 256
+MAX_UPLOAD_FILES = 100
+MAX_UPLOAD_BYTES = 25 * 1024 * 1024          # 25 MB per file
+MAX_TOTAL_UPLOAD_BYTES = 200 * 1024 * 1024   # 200 MB per request
 
 
 @asynccontextmanager
@@ -61,9 +71,16 @@ def _canonical_url(url: str) -> str:
             return f"https://www.youtube.com/watch?v={qs['v'][0]}"
     return url
 
+_cors_origins = settings.cors_origin_list()
+if _cors_origins == ["*"] and settings.api_key:
+    import logging
+    logging.getLogger(__name__).warning(
+        "CORS is set to '*' while an API key is configured — set CORS_ORIGINS to "
+        "explicit frontend origin(s) for production."
+    )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origin_list(),
+    allow_origins=_cors_origins,
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
@@ -72,42 +89,43 @@ app.add_middleware(RequestIDMiddleware)
 
 
 class IngestRequest(BaseModel):
-    url: str
-    title: Optional[str] = None
+    url: str = Field(min_length=1, max_length=MAX_URL_LEN)
+    title: Optional[str] = Field(default=None, max_length=MAX_TITLE_LEN)
 
 
 class DriveIngestRequest(BaseModel):
-    source_url: str
-    title: str
-    video_id: str
+    source_url: str = Field(min_length=1, max_length=MAX_URL_LEN)
+    title: str = Field(min_length=1, max_length=MAX_TITLE_LEN)
+    video_id: str = Field(min_length=1, max_length=MAX_ID_LEN)
     transcript: list[dict]   # [{text, start, duration}]
     frames: list[dict]       # [{path, timestamp}]
 
 
 class QueryRequest(BaseModel):
-    query: str
-    tutorial_id: Optional[str] = None
-    top_k: int = 5
-    history: list[dict] = []  # [{role, text}] — last N exchanges for multi-turn context
+    query: str = Field(min_length=1, max_length=MAX_QUERY_LEN)
+    tutorial_id: Optional[str] = Field(default=None, max_length=MAX_ID_LEN)
+    top_k: int = Field(default=5, ge=1, le=50)
+    # [{role, text}] — last N exchanges for multi-turn context
+    history: list[dict] = Field(default_factory=list, max_length=MAX_HISTORY_TURNS)
 
 
 class FeedbackRequest(BaseModel):
-    query: str
-    step_id: str
+    query: str = Field(min_length=1, max_length=MAX_QUERY_LEN)
+    step_id: str = Field(min_length=1, max_length=MAX_ID_LEN)
     helpful: bool
 
 
 class NotionIngestRequest(BaseModel):
-    page_id: str
-    notion_token: str
-    title: Optional[str] = None
+    page_id: str = Field(min_length=1, max_length=MAX_ID_LEN)
+    notion_token: str = Field(min_length=1, max_length=MAX_ID_LEN)
+    title: Optional[str] = Field(default=None, max_length=MAX_TITLE_LEN)
 
 
 class WatcherCreateRequest(BaseModel):
-    source_type: str   # youtube_channel | drive_folder | notion_page | notion_database
-    source_id: str
-    label: Optional[str] = None
-    config: dict = {}  # token_path, notion_token, recursive, etc.
+    source_type: WatcherSourceType
+    source_id: str = Field(min_length=1, max_length=MAX_ID_LEN)
+    label: Optional[str] = Field(default=None, max_length=MAX_ID_LEN)
+    config: dict = Field(default_factory=dict)  # token_path, notion_token, recursive, etc.
 
 
 @app.post("/ingest", status_code=202)
@@ -247,10 +265,33 @@ def reingest_tutorial(tutorial_id: str, background_tasks: BackgroundTasks) -> di
 @app.post("/ingest/images", status_code=202)
 async def ingest_images_endpoint(
     background_tasks: BackgroundTasks,
-    title: str = Form(...),
+    title: str = Form(..., min_length=1, max_length=MAX_TITLE_LEN),
     files: list[UploadFile] = File(...),
 ) -> dict:
-    file_data = [(f.filename or f"file_{i}", await f.read()) for i, f in enumerate(files)]
+    if not files:
+        raise HTTPException(status_code=400, detail="No files uploaded")
+    if len(files) > MAX_UPLOAD_FILES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Too many files (max {MAX_UPLOAD_FILES})",
+        )
+
+    file_data: list[tuple[str, bytes]] = []
+    total = 0
+    for i, f in enumerate(files):
+        data = await f.read()
+        if len(data) > MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File {f.filename or i} exceeds {MAX_UPLOAD_BYTES} bytes",
+            )
+        total += len(data)
+        if total > MAX_TOTAL_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Upload exceeds total limit of {MAX_TOTAL_UPLOAD_BYTES} bytes",
+            )
+        file_data.append((f.filename or f"file_{i}", data))
 
     job_id = str(uuid.uuid4())
     with get_db_session() as session:
@@ -299,7 +340,10 @@ def ingest_drive_endpoint(req: DriveIngestRequest, background_tasks: BackgroundT
 
 
 @app.get("/jobs")
-def list_jobs(status: Optional[str] = None, limit: int = 20) -> list:
+def list_jobs(
+    status: Optional[str] = None,
+    limit: int = Query(default=20, ge=1, le=200),
+) -> list:
     """Return recent jobs, optionally filtered by status (comma-separated)."""
     with get_db_session() as session:
         q = session.query(JobDB).order_by(JobDB.created_at.desc())
@@ -329,7 +373,7 @@ def create_watcher(req: WatcherCreateRequest) -> dict:
     with get_db_session() as session:
         session.add(WatcherDB(
             id=watcher_id,
-            source_type=req.source_type,
+            source_type=req.source_type.value,
             source_id=req.source_id,
             label=req.label or req.source_id,
             config_json=req.config,
@@ -520,7 +564,10 @@ def _run_reindex() -> None:
 
 
 @app.get("/admin/query-logs")
-def get_query_logs(limit: int = 500, since: Optional[str] = None) -> list:
+def get_query_logs(
+    limit: int = Query(default=500, ge=1, le=2000),
+    since: Optional[str] = None,
+) -> list:
     from datetime import timedelta
 
     from stepwise.models import QueryLogDB

@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
+from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -18,6 +19,14 @@ from sqlalchemy import (
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
+class WatcherSourceType(str, Enum):
+    """Valid watched-source types (also the keys of the watcher fetcher registry)."""
+    youtube_channel = "youtube_channel"
+    drive_folder = "drive_folder"
+    notion_page = "notion_page"
+    notion_database = "notion_database"
+
+
 class Base(DeclarativeBase):
     pass
 
@@ -29,7 +38,7 @@ class TutorialDB(Base):
     source_url = Column(String, nullable=False)
     title = Column(String)
     source_type = Column(String, default="youtube")
-    meta = Column(JSON, default={})
+    meta = Column(JSON, default=dict)
     steps = relationship("StepDB", back_populates="tutorial", cascade="all, delete-orphan")
 
 
@@ -85,7 +94,7 @@ class WatcherDB(Base):
     label = Column(String)
     last_seen_at = Column(String, nullable=True)   # ISO 8601 — last time we detected new content
     last_item_id = Column(String, nullable=True)   # last video/file/page ID we queued
-    config_json = Column(JSON, default={})          # e.g. {"token_path": "...", "recursive": true}
+    config_json = Column(JSON, default=dict)         # e.g. {"token_path": "...", "recursive": true}
     active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
@@ -129,8 +138,8 @@ class Tutorial(BaseModel):
     source_url: str
     title: Optional[str] = None
     source_type: str = "youtube"
-    steps: list[Step] = []
-    meta: dict = {}
+    steps: list[Step] = Field(default_factory=list)
+    meta: dict = Field(default_factory=dict)
 
 
 class Segment(BaseModel):
@@ -138,7 +147,7 @@ class Segment(BaseModel):
     time_start: float
     time_end: float
     transcript: str
-    frame_paths: list[str] = []
+    frame_paths: list[str] = Field(default_factory=list)
 
 
 def get_engine(db_path: Path):
