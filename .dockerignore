@@ -1,7 +1,32 @@
+# Virtualenvs and build artifacts
 venv/
-data/
+.venv/
+*.egg-info/
 __pycache__/
 *.pyc
+
+# Runtime data (db, chroma index, frames)
+data/
+
+# Secrets
 .env
+.env.*
+!.env.example
+
+# Not part of the backend image
 web/
-*.egg-info/
+zendesk-app/
+tests/
+scripts/
+docs/
+*.md
+*.html
+
+# Tooling / VCS noise
+.git/
+.github/
+.ruff_cache/
+.pytest_cache/
+.vscode/
+.claude/
+.DS_Store

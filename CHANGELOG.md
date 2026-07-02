@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and Dependabot configuration.
 - Stepwise-specific frontend README under `web/`.
 
+### Changed
+
+- Hardened the backend `Dockerfile`: copy source before installing so the build
+  is reproducible, install runtime dependencies only (no dev extras), and run as
+  a non-root user. The frontend production image now also runs as non-root.
+- Expanded `.dockerignore` and `web/.dockerignore` to shrink the build context
+  and keep secrets out of images.
+
 ### Fixed
 
 - Cleaned the lint/build verification baseline (ruff, ESLint, Next build) with
