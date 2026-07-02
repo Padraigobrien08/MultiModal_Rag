@@ -1,5 +1,6 @@
 """API middleware — request IDs, optional API-key auth, and related guards."""
 
+import hmac
 import logging
 import uuid
 
@@ -46,7 +47,8 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         provided = _extract_api_key(request)
-        if provided != settings.api_key:
+        # Constant-time comparison to avoid leaking the key via timing.
+        if provided is None or not hmac.compare_digest(provided, settings.api_key):
             return JSONResponse(status_code=401, content={"detail": "Invalid or missing API key"})
 
         return await call_next(request)

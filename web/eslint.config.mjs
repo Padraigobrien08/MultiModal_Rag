@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Node test files run via `node --test`, not part of the app build.
+    "**/*.test.ts",
   ]),
 ]);
 
