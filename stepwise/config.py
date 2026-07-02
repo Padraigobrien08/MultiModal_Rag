@@ -6,7 +6,18 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     anthropic_api_key: str
-    claude_model: str = "claude-sonnet-4-6"
+
+    # ── Claude model IDs, one per pipeline stage ────────────────────────────
+    # Defaults pin the models this project was built against. Model IDs change
+    # over time — check Anthropic's model docs before updating, and prefer the
+    # current recommended IDs for new deployments:
+    #   https://platform.claude.com/docs/en/about-claude/models/overview
+    # As of this writing the current IDs are claude-sonnet-5, claude-opus-4-8,
+    # and claude-haiku-4-5-20251001. See README "Choosing Claude models".
+    structuring_model: str = "claude-haiku-4-5-20251001"   # step extraction (high volume)
+    hyde_model: str = "claude-haiku-4-5"                    # HyDE hypothetical-answer generation
+    synthesis_model: str = "claude-haiku-4-5"              # streamed answer synthesis
+    consolidation_model: str = "claude-sonnet-4-6"        # step consolidation (judgment)
 
     data_dir: Path = Path("./data")
     db_path: Path = Path("./data/stepwise.db")
@@ -17,9 +28,6 @@ class Settings(BaseSettings):
 
     frame_interval_seconds: int = 5
     embedding_model: str = "all-MiniLM-L6-v2"
-    # Cheaper model for high-volume schema-bound structuring;
-    # Sonnet used for consolidation/retrieval
-    structuring_model: str = "claude-haiku-4-5-20251001"
     drive_token_path: Path = Path("./data/drive_token.json")
 
     # Auto-ingestion: poll watched sources on an interval inside the API process

@@ -17,7 +17,11 @@ class TestSettings:
         s = Settings()
 
         assert s.anthropic_api_key == "test-key"
-        assert s.claude_model == "claude-sonnet-4-6"
+        # Per-stage Claude model defaults (see README "Choosing Claude models").
+        assert s.structuring_model == "claude-haiku-4-5-20251001"
+        assert s.hyde_model == "claude-haiku-4-5"
+        assert s.synthesis_model == "claude-haiku-4-5"
+        assert s.consolidation_model == "claude-sonnet-4-6"
         assert s.frame_interval_seconds == 5
         assert s.embedding_model == "all-MiniLM-L6-v2"
         assert s.watcher_poll_enabled is True
@@ -62,8 +66,10 @@ class TestSettings:
     def test_missing_optional_env_uses_defaults(self, monkeypatch):
         monkeypatch.setenv("ANTHROPIC_API_KEY", "only-required-key")
         for key in (
-            "CLAUDE_MODEL",
             "STRUCTURING_MODEL",
+            "HYDE_MODEL",
+            "SYNTHESIS_MODEL",
+            "CONSOLIDATION_MODEL",
             "EMBEDDING_MODEL",
             "WATCHER_POLL_INTERVAL_MINUTES",
         ):
@@ -73,6 +79,20 @@ class TestSettings:
 
         assert s.structuring_model == "claude-haiku-4-5-20251001"
         assert s.drive_token_path == Path("./data/drive_token.json")
+
+    def test_model_ids_overridable_via_env(self, monkeypatch):
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+        monkeypatch.setenv("STRUCTURING_MODEL", "claude-haiku-4-5")
+        monkeypatch.setenv("HYDE_MODEL", "claude-sonnet-5")
+        monkeypatch.setenv("SYNTHESIS_MODEL", "claude-opus-4-8")
+        monkeypatch.setenv("CONSOLIDATION_MODEL", "claude-opus-4-8")
+
+        s = Settings()
+
+        assert s.structuring_model == "claude-haiku-4-5"
+        assert s.hyde_model == "claude-sonnet-5"
+        assert s.synthesis_model == "claude-opus-4-8"
+        assert s.consolidation_model == "claude-opus-4-8"
 
     def test_api_key_and_cors_from_env(self, monkeypatch):
         monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
