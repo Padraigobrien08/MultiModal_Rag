@@ -19,7 +19,6 @@ _client = None
 
 TOP_K = 5
 FETCH_K = 15        # candidates fetched before cross-encoder re-ranking
-FAST_MODEL = "claude-haiku-4-5"
 
 # After embedding normalisation, unit-norm vectors give L2 distance in [0, 2].
 # Empirical calibration: relevant ~0.84–1.00, borderline ~1.17–1.35, irrelevant ~1.42+.
@@ -60,7 +59,7 @@ def _hypothetical_step(query: str, history: list[dict]) -> str:
     messages.append({"role": "user", "content": query})
 
     response = _get_client().messages.create(
-        model=FAST_MODEL,
+        model=settings.hyde_model,
         max_tokens=120,
         system=(
             "Write a single software tutorial step that directly answers the question. "
@@ -344,7 +343,7 @@ def query_steps_stream(
     t_synth = time.monotonic()
     answer_parts: list[str] = []
     with _get_client().messages.stream(
-        model=FAST_MODEL,
+        model=settings.synthesis_model,
         max_tokens=300,
         system=(
             "You are a tutorial assistant. Answer the user's question in 1-3 sentences "
@@ -390,7 +389,7 @@ def query_steps(
     messages = _build_synthesis_messages(context, query, history)
     t_synth = time.monotonic()
     response = _get_client().messages.create(
-        model=FAST_MODEL,
+        model=settings.synthesis_model,
         max_tokens=300,
         system=(
             "You are a tutorial assistant. Answer the user's question in 1-3 sentences "

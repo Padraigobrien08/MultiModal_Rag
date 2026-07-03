@@ -72,7 +72,7 @@ def consolidate_steps(steps: list[Step], target_count: int) -> list[Step]:
     )
 
     response = _get_client().messages.create(
-        model=settings.claude_model,
+        model=settings.consolidation_model,
         max_tokens=4096,
         system=SYSTEM_PROMPT,
         tools=[CONSOLIDATE_TOOL],

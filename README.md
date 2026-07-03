@@ -137,7 +137,7 @@ Ingestion is the expensive path — it's where the multimodal LLM calls happen. 
 
 | Lever | What it does | Why it's free quality |
 |---|---|---|
-| **Haiku for extraction** | Step extraction is a fixed-schema tool-use task. Haiku does it as well as Sonnet, at roughly an order of magnitude lower cost per token. | Sonnet is reserved for consolidation & answer synthesis, where judgment matters. |
+| **Haiku for extraction** | Step extraction is a fixed-schema tool-use task. Haiku does it as well as Sonnet, at roughly an order of magnitude lower cost per token. | Sonnet is reserved for consolidation, where judgment matters most; extraction, HyDE, and synthesis run on Haiku. |
 | **Scene-change frame dedup** | Drops near-identical frames before they're encoded as base64 and sent to Claude — often **40–60%** fewer image tokens on screencast content. | Identical frames carry zero new visual information. |
 | **Prompt caching** | The structuring system prompt is marked `cache_control: ephemeral` — served from cache on every segment after the first. | Same prompt, every call. Pure win. |
 
@@ -250,8 +250,10 @@ Set via `.env` (see [`.env.example`](.env.example)):
 | Variable | Default | Description |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | *(required)* | Claude API key |
-| `CLAUDE_MODEL` | `claude-sonnet-4-6` | Model for consolidation & synthesis |
-| `STRUCTURING_MODEL` | `claude-haiku-4-5-20251001` | Cheaper model for step extraction |
+| `STRUCTURING_MODEL` | `claude-haiku-4-5-20251001` | Step extraction (high volume) |
+| `HYDE_MODEL` | `claude-haiku-4-5` | HyDE hypothetical-answer generation |
+| `SYNTHESIS_MODEL` | `claude-haiku-4-5` | Streamed answer synthesis |
+| `CONSOLIDATION_MODEL` | `claude-sonnet-4-6` | Step consolidation (judgment) |
 | `FRAME_INTERVAL_SECONDS` | `5` | Frame sampling interval |
 | `EMBEDDING_MODEL` | `all-MiniLM-L6-v2` | Text embedding model |
 | `DRIVE_TOKEN_PATH` | `./data/drive_token.json` | Google Drive OAuth token |
@@ -261,6 +263,21 @@ Set via `.env` (see [`.env.example`](.env.example)):
 | `CORS_ORIGINS` | `*` | Comma-separated allowed origins, or `*` for local dev |
 
 When `API_KEY` is set, the **API**, **web BFF** (`API_KEY` in the Next.js server env — forwarded automatically via `web/lib/backend.ts`), **Zendesk sidebar** (optional `api_key` app setting), and scripts must include the key in requests. Leave it unset for local development.
+
+### Choosing Claude models
+
+Every Claude model ID lives in [`stepwise/config.py`](stepwise/config.py) — none are hard-coded in the pipeline. Each stage has its own setting so you can trade cost against quality independently:
+
+- **`STRUCTURING_MODEL`** — high-volume step extraction; a fast, cheap model (Haiku) is the sweet spot.
+- **`HYDE_MODEL`** — generates a hypothetical answer to steer retrieval; latency-sensitive, so a fast model works well.
+- **`SYNTHESIS_MODEL`** — writes the final streamed answer; also fast by default.
+- **`CONSOLIDATION_MODEL`** — merges and cleans extracted steps, where judgment matters most; a stronger model (Sonnet) is worth the cost.
+
+**Model IDs change over time.** The defaults pin the models this project was built against — before changing them, check Anthropic's model overview for the current recommended IDs and pricing:
+
+**https://platform.claude.com/docs/en/about-claude/models/overview**
+
+At the time of writing, the current model IDs are `claude-sonnet-5`, `claude-opus-4-8`, and `claude-haiku-4-5-20251001`. Override any stage via its environment variable (see [`.env.example`](.env.example)) — for example, `CONSOLIDATION_MODEL=claude-opus-4-8` to use a more capable model for consolidation.
 
 ---
 
