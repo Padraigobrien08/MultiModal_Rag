@@ -5,7 +5,39 @@ build-backend = "hatchling.build"
 [project]
 name = "stepwise"
 version = "0.1.0"
+description = "Turn tutorial videos into a visually-grounded, Claude-powered knowledge base that answers questions with the exact step and the screenshot to prove it."
+readme = "README.md"
 requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Padraig O'Brien", email = "padraigobrien00@gmail.com" },
+]
+keywords = [
+    "rag",
+    "multimodal",
+    "claude",
+    "anthropic",
+    "retrieval",
+    "video",
+    "embeddings",
+    "knowledge-base",
+    "fastapi",
+    "chromadb",
+]
+classifiers = [
+    # Not published to PyPI — this classifier makes any upload attempt fail fast.
+    # See "Releasing" in CONTRIBUTING.md.
+    "Private :: Do Not Upload",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Framework :: FastAPI",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Multimedia :: Video",
+]
 dependencies = [
     "anthropic>=0.40.0",
     "chromadb>=0.5.0",
@@ -37,6 +69,12 @@ dev = [
     "httpx>=0.27.0",
     "ruff>=0.8.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Padraigobrien08/MultiModal_Rag"
+Repository = "https://github.com/Padraigobrien08/MultiModal_Rag"
+Issues = "https://github.com/Padraigobrien08/MultiModal_Rag/issues"
+Changelog = "https://github.com/Padraigobrien08/MultiModal_Rag/blob/main/CHANGELOG.md"
 
 [project.scripts]
 stepwise = "stepwise.cli:app"
