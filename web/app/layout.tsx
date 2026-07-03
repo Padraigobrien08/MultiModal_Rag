@@ -1,17 +1,22 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
+// Self-hosted so the production build never reaches out to Google Fonts,
+// which hangs in network-restricted build environments. These are the latin
+// variable woff2 files for Space Grotesk / JetBrains Mono.
+const spaceGrotesk = localFont({
+  src: "./fonts/SpaceGrotesk-latin.woff2",
   variable: "--font-sans",
-  weight: ["300", "400", "500", "600", "700"],
+  weight: "300 700",
+  display: "swap",
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
+const jetbrainsMono = localFont({
+  src: "./fonts/JetBrainsMono-latin.woff2",
   variable: "--font-mono",
-  weight: ["300", "400", "500", "600"],
+  weight: "300 600",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
