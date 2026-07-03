@@ -90,6 +90,57 @@ disable rules to make a check pass unless you can justify it in the PR.
 - **Don't commit secrets.** Never commit `.env` or API keys. See
   [SECURITY.md](SECURITY.md#handling-secrets).
 
+## Releasing
+
+Stepwise is a **deployed application, not a published package.** It is *not*
+uploaded to PyPI — `pyproject.toml` exists so the backend installs cleanly
+(`pip install -e .`) and exposes the `stepwise` CLI, nothing more. The
+`Private :: Do Not Upload` classifier makes any accidental `twine upload` fail,
+so there is no publish step to run.
+
+Because there is no package registry, a "release" is just a **git tag plus a
+GitHub release** that pins a known-good commit. The `CHANGELOG.md` compare/
+release links resolve once the matching tag exists.
+
+### Cutting a release
+
+1. **Land all changes** for the release on `main` and make sure CI is green.
+2. **Move the `[Unreleased]` entries** in `CHANGELOG.md` under a new
+   `## [X.Y.Z]` heading dated today, and add a fresh empty `[Unreleased]`
+   section above it.
+3. **Bump `version`** in `pyproject.toml` to `X.Y.Z` (skip for the first
+   `0.1.0`, which is already set).
+4. **Update the link references** at the bottom of `CHANGELOG.md` so
+   `[Unreleased]` compares `vX.Y.Z...HEAD` and `[X.Y.Z]` points at the new tag.
+5. **Verify metadata still builds:** `python -m build` (produces
+   `dist/stepwise-X.Y.Z*`; the `Private :: Do Not Upload` classifier is
+   expected — do not upload).
+6. **Commit, tag, and push:**
+
+   ```bash
+   git commit -am "Release vX.Y.Z"
+   git tag -a vX.Y.Z -m "Stepwise vX.Y.Z"
+   git push origin main --follow-tags
+   ```
+
+7. **Create the GitHub release** from the tag (`gh release create vX.Y.Z
+   --notes-from-tag` or the web UI) and paste the `CHANGELOG.md` section as the
+   notes.
+
+> **First release (`v0.1.0`):** the `0.1.0` section already exists in
+> `CHANGELOG.md`, so the initial release is just steps 6–7 with `vX.Y.Z =
+> v0.1.0`. Until that tag is pushed, the `v0.1.0` links in `CHANGELOG.md` will
+> 404 — creating the tag is what makes them resolve.
+
+### Citation metadata
+
+We deliberately **do not ship a `CITATION.cff`.** Stepwise is a product/
+application rather than a research artifact or library meant to be cited in
+academic work, so a citation file would add maintenance overhead without a real
+audience. If that changes (e.g. the project is referenced in a paper), add a
+`CITATION.cff` at the repo root and GitHub will surface a "Cite this
+repository" button automatically.
+
 ## Reporting bugs & requesting features
 
 Use the [issue templates](https://github.com/Padraigobrien08/MultiModal_Rag/issues/new/choose).

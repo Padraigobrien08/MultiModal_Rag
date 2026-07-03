@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `CODE_OF_CONDUCT.md`, `SUPPORT.md`, `CHANGELOG.md`, GitHub issue/PR templates,
   and Dependabot configuration.
 - Stepwise-specific frontend README under `web/`.
+- Complete packaging metadata in `pyproject.toml` (description, readme, license,
+  authors, keywords, classifiers, and project URLs) and a "Releasing" checklist
+  in `CONTRIBUTING.md` documenting the git-tag/GitHub-release flow. The project
+  is intentionally not published to PyPI, enforced via the
+  `Private :: Do Not Upload` classifier.
 
 ### Security
 
