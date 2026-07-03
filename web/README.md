@@ -49,6 +49,7 @@ npm run dev                   # http://localhost:3000
 | `npm run build` | Production build                     |
 | `npm run start` | Serve the production build           |
 | `npm run lint`  | Run ESLint                           |
+| `npm run test`  | Run the `/api/frame` route tests     |
 
 ## Configuration
 
@@ -64,4 +65,4 @@ In Docker these are set in `docker-compose.yml`.
 ## Contributing
 
 See the root [CONTRIBUTING.md](../CONTRIBUTING.md). Before opening a PR, make
-sure `npm run lint` and `npm run build` pass.
+sure `npm run lint`, `npm run test`, and `npm run build` pass.

@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardened the frame-serving route (`web/app/api/frame`) with `path.relative`
   containment (blocking sibling-prefix bypasses), NUL-byte rejection, an
   extension allow-list, and correct per-type content types — with real tests
-  (`web/app/api/frame/route.test.ts`, run from `pytest`).
+  (`web/app/api/frame/route.test.ts`, run with `npm run test`).
 
 ### Changed
 
