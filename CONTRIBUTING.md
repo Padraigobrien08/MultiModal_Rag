@@ -48,6 +48,27 @@ docker compose up --build
 - API → http://localhost:8000
 - Web → http://localhost:3000
 
+### Dependency pinning
+
+Runtime dependencies are declared as **version ranges** in `pyproject.toml` —
+that keeps local dev (`pip install -e .`) and Dependabot simple. For the
+**production Docker image** we also keep `constraints.txt`, a fully-pinned
+snapshot of the resolved transitive tree, so image builds are reproducible
+instead of picking up whatever satisfies the ranges on build day. The
+`Dockerfile` installs with `pip install -c constraints.txt .`.
+
+`constraints.txt` is generated (do not hand-edit). Regenerate it after changing
+runtime dependencies in `pyproject.toml`, or to pull in transitive security
+fixes:
+
+```bash
+make lock          # requires Docker; resolves inside python:3.11-slim
+```
+
+Commit the regenerated `constraints.txt` alongside the `pyproject.toml` change.
+Dependabot still bumps the ranges in `pyproject.toml`; run `make lock` when you
+want those bumps reflected in the pinned image build.
+
 ## Checks before opening a PR
 
 Your change must pass the same checks CI runs. Dev tooling (`ruff`, `pytest`)
