@@ -15,7 +15,9 @@ See the [README](README.md#repository-layout) for the full module map.
 ### Prerequisites
 
 - Python **3.11+**
-- Node.js **20+** (for the `web/` frontend)
+- Node.js **24** (matches CI). `npm run test` runs the TypeScript tests through
+  Node's native type-stripping, which requires Node **≥ 22.18** (or 23.6+) — Node
+  20 cannot run them.
 - `ffmpeg` and `yt-dlp` on your `PATH` (required for video ingestion)
 - An `ANTHROPIC_API_KEY`
 
