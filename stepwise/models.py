@@ -71,6 +71,12 @@ class JobDB(Base):
     step_count = Column(Integer, nullable=True)
     error = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+    completed_at = Column(DateTime, nullable=True)  # set when status reaches done | error
 
 
 class FeedbackDB(Base):

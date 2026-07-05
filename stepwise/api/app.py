@@ -1,3 +1,4 @@
+import os
 import re
 import uuid
 from contextlib import asynccontextmanager
@@ -8,8 +9,9 @@ from urllib.parse import parse_qs, urlparse
 import chromadb
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import text
 
 from stepwise.api.middleware import APIKeyMiddleware, RequestIDMiddleware
 from stepwise.config import settings
@@ -39,9 +41,15 @@ MAX_TOTAL_UPLOAD_BYTES = 200 * 1024 * 1024   # 200 MB per request
 async def lifespan(app: FastAPI):
     setup_logging()
     with get_db_session() as session:
+        now = datetime.now(timezone.utc)
         session.query(JobDB).filter(
             JobDB.status.in_(["pending", "running"])
-        ).update({"status": "error", "error": "Server restarted while job was in progress"})
+        ).update({
+            "status": "error",
+            "error": "Server restarted while job was in progress",
+            "updated_at": now,
+            "completed_at": now,
+        })
         session.commit()
     if settings.watcher_poll_enabled:
         from stepwise.ingestion import scheduler
@@ -165,6 +173,8 @@ def get_job(job_id: str) -> dict:
             "step_count": job.step_count,
             "error": job.error,
             "created_at": job.created_at.isoformat() if job.created_at else None,
+            "updated_at": job.updated_at.isoformat() if job.updated_at else None,
+            "completed_at": job.completed_at.isoformat() if job.completed_at else None,
         }
 
 
@@ -362,6 +372,8 @@ def list_jobs(
                 "step_count": j.step_count,
                 "error": j.error,
                 "created_at": j.created_at.isoformat() if j.created_at else None,
+                "updated_at": j.updated_at.isoformat() if j.updated_at else None,
+                "completed_at": j.completed_at.isoformat() if j.completed_at else None,
             }
             for j in jobs
         ]
@@ -643,3 +655,42 @@ def get_gaps(force: bool = False) -> list:
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/ready")
+def ready():
+    """Readiness probe: verify the DB is writable and Chroma is reachable.
+
+    Unlike /health, this touches real dependencies, but deliberately avoids
+    loading ML models so it stays cheap enough for orchestrator probes.
+    Returns 503 with a per-check breakdown when a dependency is unavailable.
+    """
+    checks: dict[str, str] = {}
+    ok = True
+
+    # DB path writable and reachable.
+    try:
+        db_dir = settings.db_path.parent
+        if not os.access(db_dir, os.W_OK):
+            raise OSError(f"{db_dir} is not writable")
+        if settings.db_path.exists() and not os.access(settings.db_path, os.W_OK):
+            raise OSError(f"{settings.db_path} is not writable")
+        with get_db_session() as session:
+            session.execute(text("SELECT 1"))
+        checks["db"] = "ok"
+    except Exception as exc:
+        ok = False
+        checks["db"] = f"error: {exc}"
+
+    # Chroma reachable (no embedding models loaded).
+    try:
+        chromadb.PersistentClient(path=str(settings.chroma_path)).heartbeat()
+        checks["chroma"] = "ok"
+    except Exception as exc:
+        ok = False
+        checks["chroma"] = f"error: {exc}"
+
+    return JSONResponse(
+        status_code=200 if ok else 503,
+        content={"status": "ready" if ok else "not ready", "checks": checks},
+    )

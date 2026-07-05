@@ -213,9 +213,13 @@ stepwise query "how do I configure an API key?"
 | `POST` | `/watchers` · `POST /watchers/poll` | Manage & poll auto-ingestion sources |
 | `GET` | `/gaps?force=true` | Detect coverage gaps from query logs |
 | `GET` | `/admin/query-logs` · `/admin/stats` | Retrieval telemetry |
-| `GET` | `/jobs` · `/jobs/{id}` | Background ingestion job status |
+| `GET` | `/jobs` · `/jobs/{id}` | Background ingestion job status (with `created_at` / `updated_at` / `completed_at`) |
+| `GET` | `/health` | Liveness — always cheap, no dependency checks |
+| `GET` | `/ready` | Readiness — verifies DB writability + Chroma reachability (no ML models); `503` when a dependency is down |
 
 Full interactive schema at **`/docs`** when the API is running.
+
+`/health` and `/ready` are the probe endpoints for an orchestrator (Docker healthcheck, Kubernetes liveness/readiness, Railway). Both are exempt from `API_KEY` auth. Use `/health` for liveness (does the process respond) and `/ready` for readiness (can it actually serve traffic) — `/ready` returns a per-check breakdown, e.g. `{"status":"ready","checks":{"db":"ok","chroma":"ok"}}`.
 
 ---
 
@@ -260,10 +264,20 @@ Set via `.env` (see [`.env.example`](.env.example)):
 | `DRIVE_TOKEN_PATH` | `./data/drive_token.json` | Google Drive OAuth token |
 | `WATCHER_POLL_ENABLED` | `true` | Run the auto-ingestion scheduler in-process |
 | `WATCHER_POLL_INTERVAL_MINUTES` | `30` | How often watched sources are polled |
-| `API_KEY` | *(unset)* | When set, require `X-API-Key` or `Authorization: Bearer` on all routes except `/health` and `/docs` |
+| `API_KEY` | *(unset)* | When set, require `X-API-Key` or `Authorization: Bearer` on all routes except `/health`, `/ready`, and `/docs` |
 | `CORS_ORIGINS` | `*` | Comma-separated allowed origins, or `*` for local dev |
 
 When `API_KEY` is set, the **API**, **web BFF** (`API_KEY` in the Next.js server env — forwarded automatically via `web/lib/backend.ts`), **Zendesk sidebar** (optional `api_key` app setting), and scripts must include the key in requests. Leave it unset for local development.
+
+### Production checklist
+
+Beyond a demo, set these before exposing the API:
+
+- **`API_KEY` — required.** Generate a strong random value (e.g. `openssl rand -hex 32`) and set it on the API and every caller (web BFF, Zendesk, scripts). Without it the API is fully open.
+- **`CORS_ORIGINS` — set explicit origins.** Never ship `*` in production. List your real frontend origin(s), e.g. `CORS_ORIGINS="https://app.example.com"`. A wildcard combined with `API_KEY` is flagged with a warning at startup.
+- **Back up the data volume.** All durable state lives under `DATA_DIR` (default `./data`): `stepwise.db` (SQLite — tutorials, steps, jobs, feedback, query logs) and `chroma/` (vector index). Snapshot the whole directory on a schedule; the two must be backed up together to stay consistent. The Docker image mounts this as a volume — back up the host path.
+- **Model download & cache.** On first run the embedding/CLIP models (`EMBEDDING_MODEL`, ~100–500 MB) download from Hugging Face into the HF cache (`~/.cache/huggingface`, or `HF_HOME` if set). This is a one-time cost per environment but happens lazily on the first ingest/query, adding startup latency and requiring outbound network access. For reproducible/offline deploys, pre-warm the cache during image build or mount a persistent cache volume so pods don't re-download on every restart. `/ready` deliberately does **not** load these models, so it stays fast even before the cache is warm.
+- **Probes & observability.** Point liveness at `/health` and readiness at `/ready`. Every request is logged with a request ID (`X-Request-ID`, generated if the client doesn't send one) and echoed back on the response; background job failures are logged with their job ID, so a failed ingest can be traced from `/jobs/{id}` to the logs.
 
 ### Choosing Claude models
 
