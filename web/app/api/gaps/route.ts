@@ -1,9 +1,7 @@
-import { fetchBackend } from "@/lib/backend";
+import { proxyJson, withQuery } from "@/lib/backend";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const force = searchParams.get("force") === "true";
-  const res = await fetchBackend(`/gaps?force=${force}`, { cache: "no-store" });
-  const data = await res.json();
-  return Response.json(data, { status: res.status });
+  return proxyJson(withQuery("/gaps", { force }), { cache: "no-store" });
 }
