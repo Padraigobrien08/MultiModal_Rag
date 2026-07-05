@@ -1,14 +1,29 @@
-import { fetchBackend } from "@/lib/backend";
+import { fetchBackend, jsonError } from "@/lib/backend";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const upstream = await fetchBackend(`/query`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError(400, "Invalid JSON request body");
+  }
+
+  let upstream: Response;
+  try {
+    upstream = await fetchBackend(`/query`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      // Streaming SSE response — don't impose a timeout, but cancel upstream
+      // if the client disconnects.
+      timeoutMs: 0,
+      signal: request.signal,
+    });
+  } catch {
+    return jsonError(502, "Backend unreachable");
+  }
 
   // Pass the SSE stream straight through — don't buffer
   return new Response(upstream.body, {

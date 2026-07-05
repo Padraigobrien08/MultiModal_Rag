@@ -20,6 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `CODE_OF_CONDUCT.md`, `SUPPORT.md`, `CHANGELOG.md`, GitHub issue/PR templates,
   and Dependabot configuration.
 - Stepwise-specific frontend README under `web/`.
+- Complete packaging metadata in `pyproject.toml` (description, readme, license,
+  authors, keywords, classifiers, and project URLs) and a "Releasing" checklist
+  in `CONTRIBUTING.md` documenting the git-tag/GitHub-release flow. The project
+  is intentionally not published to PyPI, enforced via the
+  `Private :: Do Not Upload` classifier.
+- Generated `constraints.txt` pinning the full runtime dependency tree for
+  reproducible production Docker builds. The `Dockerfile` installs with
+  `pip install -c constraints.txt .`; regenerate with `make lock` (resolves
+  inside `python:3.11-slim`). `pyproject.toml` stays range-based for local dev
+  and Dependabot. See "Dependency pinning" in `CONTRIBUTING.md`.
 
 ### Security
 
@@ -35,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardened the frame-serving route (`web/app/api/frame`) with `path.relative`
   containment (blocking sibling-prefix bypasses), NUL-byte rejection, an
   extension allow-list, and correct per-type content types — with real tests
-  (`web/app/api/frame/route.test.ts`, run from `pytest`).
+  (`web/app/api/frame/route.test.ts`, run with `npm run test`).
 
 ### Changed
 
@@ -44,6 +54,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a non-root user. The frontend production image now also runs as non-root.
 - Expanded `.dockerignore` and `web/.dockerignore` to shrink the build context
   and keep secrets out of images.
+- Centralized all Claude model IDs in `stepwise.config.Settings` with a
+  per-stage setting each (`STRUCTURING_MODEL`, `HYDE_MODEL`, `SYNTHESIS_MODEL`,
+  `CONSOLIDATION_MODEL`); removed the hard-coded `FAST_MODEL` from the retriever
+  and renamed `CLAUDE_MODEL` → `CONSOLIDATION_MODEL`. Defaults are unchanged
+  (behavior-equivalent). Documented how to choose/update models against
+  Anthropic's model docs. **Migration:** if you set `CLAUDE_MODEL`, rename it to
+  `CONSOLIDATION_MODEL`.
 
 ### Fixed
 

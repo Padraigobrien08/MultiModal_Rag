@@ -9,10 +9,13 @@ WORKDIR /app
 
 # Install the package with its runtime dependencies only (no dev extras).
 # The build backend needs the source tree present to resolve the package,
-# so copy the metadata and source before installing.
-COPY pyproject.toml ./
+# so copy the metadata and source before installing. README.md and LICENSE are
+# referenced by pyproject.toml metadata, so hatchling needs them at build time.
+# constraints.txt pins the resolved transitive tree for reproducible builds
+# (regenerate with `make lock`); ranges stay in pyproject.toml.
+COPY pyproject.toml constraints.txt README.md LICENSE ./
 COPY stepwise/ ./stepwise/
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir -c constraints.txt .
 
 # Run as an unprivileged user. Own /app (incl. the data dir) so the app can
 # write the SQLite db, Chroma index, and extracted frames.

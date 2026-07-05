@@ -1,7 +1,10 @@
-.PHONY: test lint format eval install-dev
+.PHONY: test lint format eval install-dev lock
 
 install-dev:
 	pip install -e ".[dev]"
+
+lock:
+	./scripts/lock-deps.sh
 
 test:
 	pytest tests/ -v
