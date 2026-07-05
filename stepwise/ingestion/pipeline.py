@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from datetime import datetime, timezone
 
 from stepwise.alignment import align_segments
 from stepwise.indexing import index_tutorial
@@ -72,17 +73,20 @@ class JobTracker:
                 job.stage = None
                 job.tutorial_id = tutorial_id
                 job.step_count = step_count
+                job.completed_at = datetime.now(timezone.utc)
                 session.commit()
 
     def fail(self, error: str) -> None:
         if not self.job_id:
             return
+        logging.getLogger(__name__).error("Job %s failed: %s", self.job_id, error)
         with get_db_session() as session:
             job = session.get(JobDB, self.job_id)
             if job:
                 job.status = "error"
                 job.stage = None
                 job.error = error
+                job.completed_at = datetime.now(timezone.utc)
                 session.commit()
 
 

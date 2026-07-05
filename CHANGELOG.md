@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Production operations polish: a `/ready` readiness probe that checks DB
+  writability and Chroma reachability without loading ML models (`/health`
+  stays a bare liveness check); `updated_at`/`completed_at` timestamps on
+  ingestion jobs, surfaced via `/jobs` and `/jobs/{id}`; request IDs in API
+  request logs and background job-failure logs; and a production checklist in
+  the README (`API_KEY`, explicit `CORS_ORIGINS`, data-volume backups, model
+  download/cache expectations).
 - Open-source repository hygiene: `LICENSE`, `CONTRIBUTING.md`, `SECURITY.md`,
   `CODE_OF_CONDUCT.md`, `SUPPORT.md`, `CHANGELOG.md`, GitHub issue/PR templates,
   and Dependabot configuration.

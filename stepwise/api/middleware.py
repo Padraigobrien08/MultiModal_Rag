@@ -9,11 +9,12 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from stepwise.config import settings
+from stepwise.logging_config import request_id_var
 
 log = logging.getLogger(__name__)
 
 # Paths that never require an API key (even when API_KEY is configured).
-_PUBLIC_PATHS = frozenset({"/health", "/docs", "/openapi.json", "/redoc"})
+_PUBLIC_PATHS = frozenset({"/health", "/ready", "/docs", "/openapi.json", "/redoc"})
 
 
 def _extract_api_key(request: Request) -> str | None:
@@ -32,7 +33,15 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
         request.state.request_id = request_id
-        response = await call_next(request)
+        token = request_id_var.set(request_id)
+        try:
+            response = await call_next(request)
+            log.info("%s %s -> %s", request.method, request.url.path, response.status_code)
+        except Exception:
+            log.exception("Unhandled error for %s %s", request.method, request.url.path)
+            raise
+        finally:
+            request_id_var.reset(token)
         response.headers["X-Request-ID"] = request_id
         return response
 
