@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test app/api/frame/route.test.ts"
+    "test": "node --test \"app/**/*.test.ts\" \"lib/**/*.test.ts\""
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
