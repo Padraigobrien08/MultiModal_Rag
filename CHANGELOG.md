@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in `CONTRIBUTING.md` documenting the git-tag/GitHub-release flow. The project
   is intentionally not published to PyPI, enforced via the
   `Private :: Do Not Upload` classifier.
+- Generated `constraints.txt` pinning the full runtime dependency tree for
+  reproducible production Docker builds. The `Dockerfile` installs with
+  `pip install -c constraints.txt .`; regenerate with `make lock` (resolves
+  inside `python:3.11-slim`). `pyproject.toml` stays range-based for local dev
+  and Dependabot. See "Dependency pinning" in `CONTRIBUTING.md`.
 
 ### Security
 
