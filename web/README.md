@@ -17,14 +17,14 @@ this Next.js server, which forwards to the API.
 
 ## Pages
 
-| Route         | Purpose                                                   |
-| ------------- | --------------------------------------------------------- |
-| `/`           | Home / entry                                              |
-| `/query`      | Chat — ask questions, get cited, timestamped step answers |
-| `/tutorials`  | Library — browse ingested tutorials and their steps       |
-| `/watchers`   | Manage auto-ingestion sources (YouTube / Drive / Notion)  |
-| `/gaps`       | Coverage gaps detected from query logs                    |
-| `/admin`      | Retrieval telemetry — query logs and stats                |
+| Route                       | Purpose                                                                       |
+| --------------------------- | ----------------------------------------------------------------------------- |
+| `/`                         | Main app — chat (cited, timestamped step answers), plus ingest (modal) and the library sidebar |
+| `/tutorials`, `/tutorials/[id]` | Library — browse ingested tutorials and their steps                       |
+| `/watchers`                 | Manage auto-ingestion sources (YouTube / Drive / Notion)                      |
+| `/gaps`                     | Coverage gaps detected from query logs                                        |
+| `/admin`                    | Retrieval telemetry — query logs and stats                                    |
+| `/query`                    | Redirects to `/` (the `Query` nav link and old bookmarks land here)           |
 
 ## Running
 
@@ -49,7 +49,7 @@ npm run dev                   # http://localhost:3000
 | `npm run build` | Production build                     |
 | `npm run start` | Serve the production build           |
 | `npm run lint`  | Run ESLint                           |
-| `npm run test`  | Run the `/api/frame` route tests     |
+| `npm run test`  | Run unit tests (Node's built-in test runner) |
 
 ## Configuration
 
