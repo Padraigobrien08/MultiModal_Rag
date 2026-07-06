@@ -318,11 +318,18 @@ docs/               HyDE explainer
 
 ## Evaluation
 
-A 25-query retrieval harness ([`scripts/run_eval.py`](scripts/run_eval.py)) replays realistic support questions against a tutorial corpus and scores each result **PASS / PARTIAL / MISS**, broken down by topic, against a 70% pass-rate target.
+A 25-query retrieval harness ([`scripts/run_eval.py`](scripts/run_eval.py)) replays realistic support questions against the tutorial corpus and scores each result against ground-truth targets. It reports **three separate metrics** rather than one combined number, because a no-answer win on an uncovered query is not the same as retrieving the right step:
+
+1. **Answerable retrieval pass rate** *(the headline)* — **82%** on covered queries.
+2. **No-answer calibration** — uncovered queries correctly returning no steps (**75%**, up from 12% before the retrieval-quality pass).
+3. **Overall support success** — strict PASS across all queries.
+
+Clean-corpus mode restricts search to the intended corpus to isolate ranking from cross-corpus bleed. Full details, before/after, and committed benchmarks in [docs/evaluation.md](docs/evaluation.md).
 
 ```bash
-python scripts/run_eval.py                 # interactive scoring
-python scripts/run_eval.py --auto          # dump results, no scoring
+python scripts/run_eval.py --self-check              # offline smoke check
+python scripts/run_eval.py --in-process              # full index
+python scripts/run_eval.py --in-process --clean-corpus  # intended corpus only
 ```
 
 ---
