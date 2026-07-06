@@ -1,5 +1,5 @@
 # ── Dev stage: install deps only, source is bind-mounted at runtime ───────────
-FROM node:24-slim AS dev
+FROM node:26-slim AS dev
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -7,7 +7,7 @@ EXPOSE 3000
 CMD ["npm", "run", "dev"]
 
 # ── Production build ──────────────────────────────────────────────────────────
-FROM node:24-slim AS builder
+FROM node:26-slim AS builder
 
 WORKDIR /app
 COPY package*.json ./
@@ -15,7 +15,7 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM node:24-slim AS runner
+FROM node:26-slim AS runner
 
 WORKDIR /app
 ENV NODE_ENV=production
