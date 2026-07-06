@@ -1,0 +1,26 @@
+# Zero-API-key demo. Runs ONLY the web app in demo mode — no FastAPI backend,
+# no Anthropic key, no Whisper, no embedding/CLIP model downloads. The BFF serves
+# canned answers and screenshots from ./demo instead of proxying to the backend.
+#
+#   docker compose -f docker-compose.demo.yml up --build
+#   open http://localhost:3000  →  click one of the three sample questions
+#
+# NOT for production — everything under ./demo is fake fixture data.
+services:
+  web:
+    build:
+      context: ./web
+      target: dev
+    ports:
+      - "3000:3000"
+    environment:
+      DEMO_MODE: "1"                 # BFF serves fixtures instead of the backend
+      NEXT_PUBLIC_DEMO_MODE: "1"     # shows the "DEMO MODE" banner in the UI
+      DEMO_DIR: /app/demo            # where lib/demo.ts reads responses/tutorials
+      DATA_DIR: /app/demo            # where /api/frame reads screenshot files
+    volumes:
+      - ./web:/app                   # source mount — same as the dev compose
+      - /app/node_modules            # keep the container's node_modules
+      - /app/.next                   # isolate build cache from host
+      - ./demo:/app/demo:ro          # read-only demo fixtures + screenshots
+    restart: unless-stopped

@@ -1,13 +1,13 @@
 // Real tests for the frame route's path-containment and content-type logic —
 // the security-critical code the GET handler delegates to.
-// Run with:  node --test app/api/frame/route.test.ts   (Node 22+, TS type-stripping)
+// Run with:  node --test tests/frame-path.test.ts   (Node 22+, TS type-stripping)
 import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, test } from "node:test";
 
-import { contentTypeFor, resolveFramePath } from "./frame-path.ts";
+import { contentTypeFor, resolveFramePath } from "../app/api/frame/frame-path.ts";
 
 const DATA_DIR = mkdtempSync(path.join(tmpdir(), "frame-test-"));
 

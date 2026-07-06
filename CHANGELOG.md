@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Zero-API-key demo mode (`docker compose -f docker-compose.demo.yml up --build`):
+  the web app serves canned answers and mock screenshots from `demo/` fixtures —
+  no Anthropic key, no YouTube/Whisper, no model downloads — so visitors can try
+  the cited-steps experience in under two minutes. Gated behind `DEMO_MODE` and
+  clearly labelled with a "DEMO MODE" banner (`NEXT_PUBLIC_DEMO_MODE`).
+
 ## [0.1.0] - 2026-07-06
 
 ### Added
@@ -69,7 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardened the frame-serving route (`web/app/api/frame`) with `path.relative`
   containment (blocking sibling-prefix bypasses), NUL-byte rejection, an
   extension allow-list, and correct per-type content types — with real tests
-  (`web/app/api/frame/route.test.ts`, run with `npm run test`).
+  (`web/tests/frame-path.test.ts`, run with `npm run test`).
 
 ### Changed
 

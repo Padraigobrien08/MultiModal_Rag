@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { DemoBanner } from "@/components/demo-banner";
 
 // Self-hosted so the production build never reaches out to Google Fonts,
 // which hangs in network-restricted build environments. These are the latin
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full`}>
       <body className="h-full bg-background text-foreground font-sans antialiased">
+        <DemoBanner />
         {children}
       </body>
     </html>
