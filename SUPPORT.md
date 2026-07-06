@@ -11,15 +11,15 @@ Thanks for using Stepwise! Here's how to get help.
 
 ## Questions & discussion
 
-- Browse [existing issues](https://github.com/Padraigobrien08/MultiModal_Rag/issues)
+- Browse [existing issues](https://github.com/Padraigobrien08/Stepwise/issues)
   first — your question may already be answered.
 - For usage questions, open a
-  [GitHub Discussion](https://github.com/Padraigobrien08/MultiModal_Rag/discussions)
+  [GitHub Discussion](https://github.com/Padraigobrien08/Stepwise/discussions)
   if enabled, otherwise a regular issue.
 
 ## Reporting bugs & requesting features
 
-Use the [issue templates](https://github.com/Padraigobrien08/MultiModal_Rag/issues/new/choose):
+Use the [issue templates](https://github.com/Padraigobrien08/Stepwise/issues/new/choose):
 
 - **Bug report** — something isn't working as documented.
 - **Feature request** — an idea or improvement.

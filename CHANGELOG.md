@@ -9,30 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Zero-API-key demo mode (`docker compose -f docker-compose.demo.yml up --build`):
-  the web app serves canned answers and mock screenshots from `demo/` fixtures —
-  no Anthropic key, no YouTube/Whisper, no model downloads — so visitors can try
-  the cited-steps experience in under two minutes. Gated behind `DEMO_MODE` and
-  clearly labelled with a "DEMO MODE" banner (`NEXT_PUBLIC_DEMO_MODE`).
-
-## [0.1.0] - 2026-07-06
-
-### Added
-
-- Multimodal ingestion of YouTube videos, Google Drive recordings, Notion
-  pages/databases, and screenshots.
-- Claude-based step structuring (Haiku extraction, Sonnet consolidation) with
-  trivial-step filtering and deduplication.
-- Fused text + CLIP image embeddings indexed in ChromaDB, with SQLite/SQLAlchemy
-  for relational data.
-- HyDE retrieval with a cross-encoder re-ranking stage and streamed answer
-  synthesis over SSE.
-- Auto-ingestion watchers for YouTube channels, Drive folders, and Notion
-  databases, plus a pollable endpoint.
-- Query-log gap detection that clusters unanswered questions and suggests
-  tutorials to record.
-- FastAPI backend, Next.js dashboard, and a Zendesk sidebar integration.
-- Retrieval evaluation harness (`scripts/run_eval.py`).
 - Production operations polish: a `/ready` readiness probe that checks DB
   writability and Chroma reachability without loading ML models (`/health`
   stays a bare liveness check); `updated_at`/`completed_at` timestamps on
@@ -54,14 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pip install -c constraints.txt .`; regenerate with `make lock` (resolves
   inside `python:3.11-slim`). `pyproject.toml` stays range-based for local dev
   and Dependabot. See "Dependency pinning" in `CONTRIBUTING.md`.
-- Automated security scanning wired into CI: CodeQL (Python and
-  JavaScript/TypeScript), dependency review on pull requests (fails on high+
-  severity vulnerable dependencies), and a Trivy container-image scan of both
-  images. Documented under "Automated scanning" in `SECURITY.md`.
-- Documentation and governance: an evaluation methodology and results guide
-  (`docs/evaluation.md`), an architecture and design-tradeoffs doc
-  (`docs/architecture.md`), a maintained product roadmap (`docs/roadmap.md`),
-  and a `CODEOWNERS` file. The original HTML roadmap moved to `docs/archive/`.
 
 ### Security
 
@@ -77,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardened the frame-serving route (`web/app/api/frame`) with `path.relative`
   containment (blocking sibling-prefix bypasses), NUL-byte rejection, an
   extension allow-list, and correct per-type content types — with real tests
-  (`web/tests/frame-path.test.ts`, run with `npm run test`).
+  (`web/app/api/frame/route.test.ts`, run with `npm run test`).
 
 ### Changed
 
@@ -99,5 +67,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cleaned the lint/build verification baseline (ruff, ESLint, Next build) with
   no changes to application behavior.
 
-[Unreleased]: https://github.com/Padraigobrien08/MultiModal_Rag/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/Padraigobrien08/MultiModal_Rag/releases/tag/v0.1.0
+## [0.1.0]
+
+### Added
+
+- Multimodal ingestion of YouTube videos, Google Drive recordings, Notion
+  pages/databases, and screenshots.
+- Claude-based step structuring (Haiku extraction, Sonnet consolidation) with
+  trivial-step filtering and deduplication.
+- Fused text + CLIP image embeddings indexed in ChromaDB, with SQLite/SQLAlchemy
+  for relational data.
+- HyDE retrieval with a cross-encoder re-ranking stage and streamed answer
+  synthesis over SSE.
+- Auto-ingestion watchers for YouTube channels, Drive folders, and Notion
+  databases, plus a pollable endpoint.
+- Query-log gap detection that clusters unanswered questions and suggests
+  tutorials to record.
+- FastAPI backend, Next.js dashboard, and a Zendesk sidebar integration.
+- Retrieval evaluation harness (`scripts/run_eval.py`).
+
+[Unreleased]: https://github.com/Padraigobrien08/Stepwise/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Padraigobrien08/Stepwise/releases/tag/v0.1.0

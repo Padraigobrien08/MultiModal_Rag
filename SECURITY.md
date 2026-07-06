@@ -17,7 +17,7 @@ latest release and on `main`.
 Report privately through either channel:
 
 1. **GitHub Security Advisories** (preferred) — go to the
-   [Security tab](https://github.com/Padraigobrien08/MultiModal_Rag/security/advisories/new)
+   [Security tab](https://github.com/Padraigobrien08/Stepwise/security/advisories/new)
    and choose **Report a vulnerability**.
 2. **Email** — padraigobrien00@gmail.com with the subject line
    `SECURITY: Stepwise`.

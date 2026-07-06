@@ -71,10 +71,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Padraigobrien08/MultiModal_Rag"
-Repository = "https://github.com/Padraigobrien08/MultiModal_Rag"
-Issues = "https://github.com/Padraigobrien08/MultiModal_Rag/issues"
-Changelog = "https://github.com/Padraigobrien08/MultiModal_Rag/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/Padraigobrien08/Stepwise"
+Repository = "https://github.com/Padraigobrien08/Stepwise"
+Issues = "https://github.com/Padraigobrien08/Stepwise/issues"
+Changelog = "https://github.com/Padraigobrien08/Stepwise/blob/main/CHANGELOG.md"
 
 [project.scripts]
 stepwise = "stepwise.cli:app"
