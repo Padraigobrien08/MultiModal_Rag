@@ -43,7 +43,7 @@ jobs:
         run: docker build -t local/${{ matrix.name }}:${{ github.sha }} -f ${{ matrix.dockerfile }} ${{ matrix.context }}
 
       - name: Trivy scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: local/${{ matrix.name }}:${{ github.sha }}
           format: sarif
