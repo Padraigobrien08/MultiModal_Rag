@@ -8,7 +8,7 @@ Stepwise ingests YouTube videos, Google Drive recordings, Notion docs, and scree
 
 <br/>
 
-[![CI](https://github.com/Padraigobrien08/MultiModal_Rag/actions/workflows/ci.yml/badge.svg)](https://github.com/Padraigobrien08/MultiModal_Rag/actions/workflows/ci.yml)
+[![CI](https://github.com/Padraigobrien08/Stepwise/actions/workflows/ci.yml/badge.svg)](https://github.com/Padraigobrien08/Stepwise/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)

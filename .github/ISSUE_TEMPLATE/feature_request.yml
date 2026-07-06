@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thanks for the suggestion! Please search
-        [existing issues](https://github.com/Padraigobrien08/MultiModal_Rag/issues)
+        [existing issues](https://github.com/Padraigobrien08/Stepwise/issues)
         first to avoid duplicates.
   - type: textarea
     id: problem
