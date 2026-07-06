@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardened the frame-serving route (`web/app/api/frame`) with `path.relative`
   containment (blocking sibling-prefix bypasses), NUL-byte rejection, an
   extension allow-list, and correct per-type content types — with real tests
-  (`web/app/api/frame/route.test.ts`, run from `pytest`).
+  (`web/app/api/frame/route.test.ts`, run with `npm test` / `node --test`).
 
 ### Changed
 
@@ -42,6 +42,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Cleaned the lint/build verification baseline (ruff, ESLint, Next build) with
   no changes to application behavior.
+- Frontend production build no longer hangs at "Creating an optimized production
+  build …" in network-restricted environments: fonts are now self-hosted via
+  `next/font/local` (committed woff2 files) instead of fetched from Google Fonts
+  at build time. Typography is unchanged.
+- Removed the Node `MODULE_TYPELESS_PACKAGE_JSON` warning from `web` tests by
+  declaring `"type": "module"` in `web/package.json`, and added a `web` `test`
+  script (`node --test app/api/frame/route.test.ts`).
 
 ## [0.1.0]
 
