@@ -17,7 +17,7 @@ latest release and on `main`.
 Report privately through either channel:
 
 1. **GitHub Security Advisories** (preferred) — go to the
-   [Security tab](https://github.com/Padraigobrien08/MultiModal_Rag/security/advisories/new)
+   [Security tab](https://github.com/Padraigobrien08/Stepwise/security/advisories/new)
    and choose **Report a vulnerability**.
 2. **Email** — padraigobrien00@gmail.com with the subject line
    `SECURITY: Stepwise`.
@@ -37,6 +37,28 @@ Please include:
 - Please give us a reasonable window to release a fix before any public
   disclosure. We're happy to credit you in the release notes unless you'd
   rather stay anonymous.
+
+## Automated scanning
+
+CI runs several security scans on every push and pull request to `main`, plus a
+weekly scheduled sweep to catch newly published advisories in unchanged code:
+
+- **CodeQL** ([`codeql.yml`](.github/workflows/codeql.yml)) — static analysis of
+  the Python and JavaScript/TypeScript code. Findings appear as alerts in the
+  repository's **Security** tab. Advisory-only; it does not block merges.
+- **Dependency review**
+  ([`dependency-review.yml`](.github/workflows/dependency-review.yml)) — runs on
+  pull requests and **fails the check** when a dependency introducing a
+  high-or-greater severity vulnerability (or a non-permitted license) is added.
+  This is a required-quality gate.
+- **Container scan** ([`trivy.yml`](.github/workflows/trivy.yml)) — Trivy scans
+  the built application and web images for HIGH/CRITICAL, fixable
+  vulnerabilities and reports to the **Security** tab. It is intentionally
+  non-blocking, since base-image OS packages often carry unfixed CVEs that would
+  otherwise be false-positive failures.
+
+Triage code-scanning alerts from the Security tab. Vulnerabilities found in
+Stepwise's own code should follow the private reporting process above.
 
 ## Handling secrets
 

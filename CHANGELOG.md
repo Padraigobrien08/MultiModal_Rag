@@ -86,5 +86,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - FastAPI backend, Next.js dashboard, and a Zendesk sidebar integration.
 - Retrieval evaluation harness (`scripts/run_eval.py`).
 
-[Unreleased]: https://github.com/Padraigobrien08/MultiModal_Rag/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/Padraigobrien08/MultiModal_Rag/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Padraigobrien08/Stepwise/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Padraigobrien08/Stepwise/releases/tag/v0.1.0

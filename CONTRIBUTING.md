@@ -166,6 +166,6 @@ repository" button automatically.
 
 ## Reporting bugs & requesting features
 
-Use the [issue templates](https://github.com/Padraigobrien08/MultiModal_Rag/issues/new/choose).
+Use the [issue templates](https://github.com/Padraigobrien08/Stepwise/issues/new/choose).
 For anything security-related, follow [SECURITY.md](SECURITY.md) instead of
 opening a public issue.

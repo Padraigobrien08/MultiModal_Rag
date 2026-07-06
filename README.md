@@ -8,13 +8,19 @@ Stepwise ingests YouTube videos, Google Drive recordings, Notion docs, and scree
 
 <br/>
 
-[![CI](https://github.com/Padraigobrien08/MultiModal_Rag/actions/workflows/ci.yml/badge.svg)](https://github.com/Padraigobrien08/MultiModal_Rag/actions/workflows/ci.yml)
+[![CI](https://github.com/Padraigobrien08/Stepwise/actions/workflows/ci.yml/badge.svg)](https://github.com/Padraigobrien08/Stepwise/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
 ![Claude](https://img.shields.io/badge/Claude-Haiku%20%2B%20Sonnet-D97757?logo=anthropic&logoColor=white)
 ![ChromaDB](https://img.shields.io/badge/ChromaDB-vectors-FF6B6B)
 ![License](https://img.shields.io/badge/license-MIT-blue)
+
+<br/>
+
+[![Stepwise — a cited, step-by-step answer with the screenshot to prove it](docs/assets/answer-cited-steps.png)](docs/demo.md)
+
+**[▶ See the 60-second demo walkthrough →](docs/demo.md)**
 
 </div>
 
@@ -164,6 +170,21 @@ The design principle: **cut tokens, not modalities.** A transcript-only system w
 ---
 
 ## Quickstart
+
+### 🚀 Try the demo — no API key (under 2 minutes)
+
+Kick the tires with zero setup. This runs only the web app against pre-baked
+fixtures — **no Anthropic key, no YouTube/Whisper, no model downloads.**
+
+```bash
+docker compose -f docker-compose.demo.yml up --build
+# open http://localhost:3000 and click one of the three sample questions
+```
+
+You'll get cited, step-by-step answers with screenshots — the real UI, on canned
+data (clearly marked with a **DEMO MODE** banner). Fixtures live in [`demo/`](demo/);
+what you can't do is add your own videos. When you're ready for the real thing,
+use the full stack below.
 
 ### Docker (recommended)
 
@@ -326,11 +347,15 @@ A 25-query retrieval harness ([`scripts/run_eval.py`](scripts/run_eval.py)) repl
 
 Clean-corpus mode restricts search to the intended corpus to isolate ranking from cross-corpus bleed. Full details, before/after, and committed benchmarks in [docs/evaluation.md](docs/evaluation.md).
 
+**Measured (2026-07-06, 11-tutorial Stripe corpus):** **52% pass rate** (13/25) · **76% hit rate** (pass + partial) — below the 70% pass target. The gap is corpus coverage, not ranking: webhooks, getting-started, and integration score 100%, while misses cluster on questions the tutorials don't cover (refunds, disputes, payout timing).
+
 ```bash
 python scripts/run_eval.py --self-check              # offline smoke check
 python scripts/run_eval.py --in-process              # full index
 python scripts/run_eval.py --in-process --clean-corpus  # intended corpus only
 ```
+
+See [docs/evaluation.md](docs/evaluation.md) for the full rubric, target, sample output, and how to run the eval safely (including which external services and API keys it needs).
 
 ---
 

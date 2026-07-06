@@ -1,4 +1,5 @@
 import { fetchBackend, jsonError } from "@/lib/backend";
+import { DEMO_MODE, demoQueryResponse } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,11 @@ export async function POST(request: Request) {
     body = await request.json();
   } catch {
     return jsonError(400, "Invalid JSON request body");
+  }
+
+  if (DEMO_MODE) {
+    const q = (body as { query?: unknown }).query;
+    return demoQueryResponse(typeof q === "string" ? q : "");
   }
 
   let upstream: Response;

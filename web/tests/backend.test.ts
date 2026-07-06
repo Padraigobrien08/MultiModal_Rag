@@ -1,11 +1,11 @@
 // Tests for the shared BFF helpers — the transport/parsing hardening that all
 // JSON API routes delegate to. `fetchBackend` calls the global `fetch`, so we
 // stub `globalThis.fetch` to drive each branch.
-// Run with:  node --test lib/backend.test.ts   (Node 22+, TS type-stripping)
+// Run with:  node --test tests/backend.test.ts   (Node 22+, TS type-stripping)
 import assert from "node:assert/strict";
 import { afterEach, describe, test } from "node:test";
 
-import { proxyJson, proxyJsonBody, withQuery } from "./backend.ts";
+import { proxyJson, proxyJsonBody, withQuery } from "../lib/backend.ts";
 
 const realFetch = globalThis.fetch;
 
