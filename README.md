@@ -331,6 +331,8 @@ python scripts/run_eval.py                 # interactive scoring
 python scripts/run_eval.py --auto          # dump results, no scoring
 ```
 
+See [docs/evaluation.md](docs/evaluation.md) for the full rubric, target, sample output, and how to run the eval safely (including which external services and API keys it needs).
+
 ---
 
 ## Design philosophy
