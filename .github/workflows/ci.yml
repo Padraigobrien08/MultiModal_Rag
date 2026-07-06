@@ -61,3 +61,60 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  docker:
+    name: Docker Smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -t stepwise-api:ci .
+
+      - name: Build frontend image
+        run: docker build -t stepwise-web:ci ./web
+
+      # Boot the backend with throwaway env vars. The dummy key is never used —
+      # /health needs nothing, and /ready only touches the SQLite dir and a fresh
+      # Chroma path (both writable in the container) without loading any models.
+      # Polling is disabled so no background source fetches run during the probe.
+      - name: Run backend container
+        run: |
+          docker run -d --name stepwise-api -p 8000:8000 \
+            -e ANTHROPIC_API_KEY=ci-not-a-real-key \
+            -e WATCHER_POLL_ENABLED=false \
+            stepwise-api:ci
+
+      - name: Probe /health and /ready
+        run: |
+          set -euo pipefail
+
+          # Wait for the server to accept connections (up to ~30s).
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/health >/dev/null 2>&1; then
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "::error::/health did not come up within 30s"
+              exit 1
+            fi
+            sleep 1
+          done
+
+          echo "== /health =="
+          health=$(curl -fsS http://localhost:8000/health)
+          echo "$health"
+          echo "$health" | grep -q '"status":"ok"'
+
+          echo "== /ready =="
+          # /ready returns 200 when the DB and Chroma are reachable, 503 otherwise.
+          code=$(curl -sS -o /tmp/ready.json -w '%{http_code}' http://localhost:8000/ready)
+          cat /tmp/ready.json; echo
+          if [ "$code" != "200" ]; then
+            echo "::error::/ready returned HTTP $code"
+            exit 1
+          fi
+
+      - name: Backend container logs
+        if: always()
+        run: docker logs stepwise-api || true
