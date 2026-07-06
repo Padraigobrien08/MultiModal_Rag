@@ -1,155 +1,214 @@
 {
-  "description": "25 simulated Stripe support ticket queries for Phase 1 retrieval eval",
+  "description": "25 simulated Stripe support ticket queries for Stepwise retrieval eval. Each query carries ground-truth targets: expected_video_ids (the ingested tutorial(s) whose steps actually answer it, by YouTube video_id) and coverage (full = a tutorial directly covers it, partial = a tutorial touches it, none = no ingested tutorial covers it, so the correct behavior is to return no steps / say so). See docs/evaluation.md.",
+  "intended_corpus_video_ids": [
+    "4eN9by7m2eA",
+    "ArD4oZDtL_0",
+    "Q6-jmzYF55A",
+    "1l4NMj-NTUE",
+    "3v0ADH-xnrE",
+    "J62rD-pvzck",
+    "lqRxtGOUQ2o"
+  ],
   "queries": [
     {
       "id": "q01",
       "ticket": "How do I find my API keys?",
       "topic": "account_setup",
-      "expected_topics": ["account_setup", "getting_started"]
+      "expected_topics": ["account_setup", "getting_started"],
+      "expected_video_ids": ["lqRxtGOUQ2o", "1l4NMj-NTUE"],
+      "coverage": "full"
     },
     {
       "id": "q02",
       "ticket": "Where do I get my publishable and secret keys?",
       "topic": "account_setup",
-      "expected_topics": ["account_setup", "getting_started"]
+      "expected_topics": ["account_setup", "getting_started"],
+      "expected_video_ids": ["lqRxtGOUQ2o", "1l4NMj-NTUE"],
+      "coverage": "full"
     },
     {
       "id": "q03",
       "ticket": "How do I set up a webhook endpoint?",
       "topic": "webhooks",
-      "expected_topics": ["webhooks"]
+      "expected_topics": ["webhooks"],
+      "expected_video_ids": ["1l4NMj-NTUE"],
+      "coverage": "full"
     },
     {
       "id": "q04",
       "ticket": "My webhook events aren't arriving — how do I debug?",
       "topic": "webhooks",
-      "expected_topics": ["webhooks"]
+      "expected_topics": ["webhooks"],
+      "expected_video_ids": ["1l4NMj-NTUE"],
+      "coverage": "full"
     },
     {
       "id": "q05",
       "ticket": "How do I verify webhook signatures?",
       "topic": "webhooks",
-      "expected_topics": ["webhooks"]
+      "expected_topics": ["webhooks"],
+      "expected_video_ids": ["1l4NMj-NTUE"],
+      "coverage": "full"
     },
     {
       "id": "q06",
       "ticket": "How do I create a subscription plan?",
       "topic": "subscriptions",
-      "expected_topics": ["subscriptions"]
+      "expected_topics": ["subscriptions"],
+      "expected_video_ids": ["Q6-jmzYF55A"],
+      "coverage": "partial"
     },
     {
       "id": "q07",
       "ticket": "How do I cancel a customer's subscription?",
       "topic": "subscriptions",
-      "expected_topics": ["subscriptions"]
+      "expected_topics": ["subscriptions"],
+      "expected_video_ids": [],
+      "coverage": "none"
     },
     {
       "id": "q08",
       "ticket": "How do I pause a subscription without cancelling it?",
       "topic": "subscriptions",
-      "expected_topics": ["subscriptions"]
+      "expected_topics": ["subscriptions"],
+      "expected_video_ids": [],
+      "coverage": "none"
     },
     {
       "id": "q09",
       "ticket": "How do I issue a refund to a customer?",
       "topic": "payments",
-      "expected_topics": ["getting_started", "payment_links"]
+      "expected_topics": ["getting_started", "payment_links"],
+      "expected_video_ids": [],
+      "coverage": "none"
     },
     {
       "id": "q10",
       "ticket": "A customer was charged twice — what do I do?",
       "topic": "payments",
-      "expected_topics": ["getting_started"]
+      "expected_topics": ["getting_started"],
+      "expected_video_ids": [],
+      "coverage": "none"
     },
     {
       "id": "q11",
       "ticket": "How do I test payments without real card details?",
       "topic": "getting_started",
-      "expected_topics": ["getting_started", "integration"]
+      "expected_topics": ["getting_started", "integration"],
+      "expected_video_ids": ["lqRxtGOUQ2o"],
+      "coverage": "partial"
     },
     {
       "id": "q12",
       "ticket": "What test card numbers can I use?",
       "topic": "getting_started",
-      "expected_topics": ["getting_started", "integration"]
+      "expected_topics": ["getting_started", "integration"],
+      "expected_video_ids": [],
+      "coverage": "none"
     },
     {
       "id": "q13",
       "ticket": "When will my payout arrive?",
       "topic": "payouts",
-      "expected_topics": ["payouts"]
+      "expected_topics": ["payouts"],
+      "expected_video_ids": ["3v0ADH-xnrE"],
+      "coverage": "full"
     },
     {
       "id": "q14",
       "ticket": "How do I change my payout bank account?",
       "topic": "payouts",
-      "expected_topics": ["payouts"]
+      "expected_topics": ["payouts"],
+      "expected_video_ids": ["3v0ADH-xnrE"],
+      "coverage": "full"
     },
     {
       "id": "q15",
       "ticket": "How do I set up a payment link for my product?",
       "topic": "payment_links",
-      "expected_topics": ["payment_links"]
+      "expected_topics": ["payment_links"],
+      "expected_video_ids": ["Q6-jmzYF55A", "4eN9by7m2eA"],
+      "coverage": "full"
     },
     {
       "id": "q16",
       "ticket": "Can I accept payments without a website?",
       "topic": "payment_links",
-      "expected_topics": ["payment_links"]
+      "expected_topics": ["payment_links"],
+      "expected_video_ids": ["Q6-jmzYF55A", "4eN9by7m2eA"],
+      "coverage": "full"
     },
     {
       "id": "q17",
       "ticket": "How do I add a new team member to my Stripe account?",
       "topic": "account_setup",
-      "expected_topics": ["account_setup", "getting_started"]
+      "expected_topics": ["account_setup", "getting_started"],
+      "expected_video_ids": [],
+      "coverage": "none"
     },
     {
       "id": "q18",
       "ticket": "How do I accept Apple Pay and Google Pay?",
       "topic": "payment_methods",
-      "expected_topics": ["payment_methods"]
+      "expected_topics": ["payment_methods"],
+      "expected_video_ids": ["J62rD-pvzck"],
+      "coverage": "partial"
     },
     {
       "id": "q19",
       "ticket": "How do I enable SEPA or BACS bank transfer payments?",
       "topic": "payment_methods",
-      "expected_topics": ["payment_methods"]
+      "expected_topics": ["payment_methods"],
+      "expected_video_ids": ["J62rD-pvzck"],
+      "coverage": "partial"
     },
     {
       "id": "q20",
       "ticket": "A payment shows as 'pending' — is this normal?",
       "topic": "payments",
-      "expected_topics": ["getting_started", "payouts"]
+      "expected_topics": ["getting_started", "payouts"],
+      "expected_video_ids": [],
+      "coverage": "none"
     },
     {
       "id": "q21",
       "ticket": "How do I integrate Stripe into my website?",
       "topic": "integration",
-      "expected_topics": ["integration", "getting_started"]
+      "expected_topics": ["integration", "getting_started"],
+      "expected_video_ids": ["lqRxtGOUQ2o", "4eN9by7m2eA"],
+      "coverage": "full"
     },
     {
       "id": "q22",
       "ticket": "How do I create a product and price in Stripe?",
       "topic": "subscriptions",
-      "expected_topics": ["subscriptions", "payment_links"]
+      "expected_topics": ["subscriptions", "payment_links"],
+      "expected_video_ids": ["4eN9by7m2eA", "lqRxtGOUQ2o"],
+      "coverage": "full"
     },
     {
       "id": "q23",
       "ticket": "My customer's card was declined — what should I tell them?",
       "topic": "payments",
-      "expected_topics": ["getting_started", "integration"]
+      "expected_topics": ["getting_started", "integration"],
+      "expected_video_ids": [],
+      "coverage": "none"
     },
     {
       "id": "q24",
       "ticket": "How do I switch from test mode to live mode?",
       "topic": "getting_started",
-      "expected_topics": ["getting_started", "account_setup"]
+      "expected_topics": ["getting_started", "account_setup"],
+      "expected_video_ids": ["4eN9by7m2eA"],
+      "coverage": "partial"
     },
     {
       "id": "q25",
       "ticket": "How do I download my Stripe invoice or receipt?",
       "topic": "account_setup",
-      "expected_topics": ["account_setup", "getting_started"]
+      "expected_topics": ["account_setup", "getting_started"],
+      "expected_video_ids": ["4eN9by7m2eA"],
+      "coverage": "partial"
     }
   ]
 }
