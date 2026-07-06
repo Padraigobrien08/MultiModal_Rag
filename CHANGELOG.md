@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Demo proof for the repo: a `docs/demo.md` "what to try first" walkthrough with
+  screenshots of the main answer view (cited steps + frames + timestamps), the
+  library, coverage gaps, and the admin dashboard (`docs/assets/`), plus a demo
+  hero image and link near the top of the README.
 - Production operations polish: a `/ready` readiness probe that checks DB
   writability and Chroma reachability without loading ML models (`/health`
   stays a bare liveness check); `updated_at`/`completed_at` timestamps on

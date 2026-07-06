@@ -16,6 +16,12 @@ Stepwise ingests YouTube videos, Google Drive recordings, Notion docs, and scree
 ![ChromaDB](https://img.shields.io/badge/ChromaDB-vectors-FF6B6B)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
+<br/>
+
+[![Stepwise — a cited, step-by-step answer with the screenshot to prove it](docs/assets/answer-cited-steps.png)](docs/demo.md)
+
+**[▶ See the 60-second demo walkthrough →](docs/demo.md)**
+
 </div>
 
 ---
