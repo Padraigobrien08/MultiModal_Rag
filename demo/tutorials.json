@@ -1,0 +1,26 @@
+[
+  {
+    "id": "demo-admin-basics",
+    "title": "Acme Dashboard — Admin Basics",
+    "source_url": "",
+    "source_type": "demo",
+    "step_count": 2,
+    "potential_duplicate_of": null
+  },
+  {
+    "id": "demo-team-management",
+    "title": "Acme — Team Management",
+    "source_url": "",
+    "source_type": "demo",
+    "step_count": 2,
+    "potential_duplicate_of": null
+  },
+  {
+    "id": "demo-billing-refunds",
+    "title": "Acme — Billing & Refunds",
+    "source_url": "",
+    "source_type": "demo",
+    "step_count": 2,
+    "potential_duplicate_of": null
+  }
+]

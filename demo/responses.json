@@ -1,0 +1,121 @@
+{
+  "questions": [
+    {
+      "id": "api-key",
+      "match": [
+        "how do i configure an api key",
+        "configure an api key",
+        "api key",
+        "generate api key",
+        "create an api key"
+      ],
+      "answer": "Open Settings → Developer, then click Generate API key. Copy the key immediately — Acme shows it only once, so store it in your secrets manager before leaving the page.",
+      "steps": [
+        {
+          "step_number": 1,
+          "step_id": "demo-api-key-1",
+          "tutorial_id": "demo-admin-basics",
+          "tutorial_title": "Acme Dashboard — Admin Basics",
+          "source_url": "",
+          "source_type": "demo",
+          "video_id": null,
+          "timestamp_start": 45,
+          "visual_reference": "frames/api-key-01.png",
+          "text": "In the left sidebar, open Settings and select the Developer tab. This is where workspace-level API access is managed."
+        },
+        {
+          "step_number": 2,
+          "step_id": "demo-api-key-2",
+          "tutorial_id": "demo-admin-basics",
+          "tutorial_title": "Acme Dashboard — Admin Basics",
+          "source_url": "",
+          "source_type": "demo",
+          "video_id": null,
+          "timestamp_start": 72,
+          "visual_reference": "frames/api-key-02.png",
+          "text": "Under API Keys, click Generate API key. Copy the key from the dialog right away — it is displayed only once."
+        }
+      ]
+    },
+    {
+      "id": "invite-member",
+      "match": [
+        "how do i invite a team member",
+        "invite a team member",
+        "invite a teammate",
+        "invite member",
+        "add a team member",
+        "add a user"
+      ],
+      "answer": "Go to Team → Members and click Invite member. Enter the person's email, choose their role, and send the invitation — they'll get an email link to join the workspace.",
+      "steps": [
+        {
+          "step_number": 1,
+          "step_id": "demo-invite-1",
+          "tutorial_id": "demo-team-management",
+          "tutorial_title": "Acme — Team Management",
+          "source_url": "",
+          "source_type": "demo",
+          "video_id": null,
+          "timestamp_start": 30,
+          "visual_reference": "frames/invite-01.png",
+          "text": "Open Team in the sidebar and go to the Members list, then click Invite member."
+        },
+        {
+          "step_number": 2,
+          "step_id": "demo-invite-2",
+          "tutorial_id": "demo-team-management",
+          "tutorial_title": "Acme — Team Management",
+          "source_url": "",
+          "source_type": "demo",
+          "video_id": null,
+          "timestamp_start": 58,
+          "visual_reference": "frames/invite-02.png",
+          "text": "Enter the teammate's email address, pick a role (Admin, Member, or Viewer), and click Send invitation."
+        }
+      ]
+    },
+    {
+      "id": "refund",
+      "match": [
+        "how do i issue a refund",
+        "issue a refund",
+        "refund a charge",
+        "refund",
+        "give a refund",
+        "process a refund"
+      ],
+      "answer": "Open Billing → Transactions, select the charge you want to reverse, and click Refund this charge. The amount returns to the customer's original payment method.",
+      "steps": [
+        {
+          "step_number": 1,
+          "step_id": "demo-refund-1",
+          "tutorial_id": "demo-billing-refunds",
+          "tutorial_title": "Acme — Billing & Refunds",
+          "source_url": "",
+          "source_type": "demo",
+          "video_id": null,
+          "timestamp_start": 40,
+          "visual_reference": "frames/refund-01.png",
+          "text": "Go to Billing → Transactions and open the transaction for the charge you need to refund."
+        },
+        {
+          "step_number": 2,
+          "step_id": "demo-refund-2",
+          "tutorial_id": "demo-billing-refunds",
+          "tutorial_title": "Acme — Billing & Refunds",
+          "source_url": "",
+          "source_type": "demo",
+          "video_id": null,
+          "timestamp_start": 65,
+          "visual_reference": "frames/refund-02.png",
+          "text": "Click Refund this charge and confirm. The refund is returned to the original payment method."
+        }
+      ]
+    }
+  ],
+  "fallback": {
+    "answer": "This is the Stepwise demo — it only answers three canned questions with pre-baked data. Try one of the sample questions: “How do I configure an API key?”, “How do I invite a team member?”, or “How do I issue a refund?” To ask anything about your own videos, run the full app with an Anthropic API key.",
+    "steps": []
+  }
+}

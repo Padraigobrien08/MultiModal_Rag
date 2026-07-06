@@ -171,6 +171,21 @@ The design principle: **cut tokens, not modalities.** A transcript-only system w
 
 ## Quickstart
 
+### 🚀 Try the demo — no API key (under 2 minutes)
+
+Kick the tires with zero setup. This runs only the web app against pre-baked
+fixtures — **no Anthropic key, no YouTube/Whisper, no model downloads.**
+
+```bash
+docker compose -f docker-compose.demo.yml up --build
+# open http://localhost:3000 and click one of the three sample questions
+```
+
+You'll get cited, step-by-step answers with screenshots — the real UI, on canned
+data (clearly marked with a **DEMO MODE** banner). Fixtures live in [`demo/`](demo/);
+what you can't do is add your own videos. When you're ready for the real thing,
+use the full stack below.
+
 ### Docker (recommended)
 
 ```bash
