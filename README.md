@@ -341,6 +341,8 @@ docs/               HyDE explainer
 
 A 25-query retrieval harness ([`scripts/run_eval.py`](scripts/run_eval.py)) replays realistic support questions against a tutorial corpus and scores each result **PASS / PARTIAL / MISS**, broken down by topic, against a 70% pass-rate target.
 
+**Measured (2026-07-06, 11-tutorial Stripe corpus):** **52% pass rate** (13/25) · **76% hit rate** (pass + partial) — below the 70% pass target. The gap is corpus coverage, not ranking: webhooks, getting-started, and integration score 100%, while misses cluster on questions the tutorials don't cover (refunds, disputes, payout timing).
+
 ```bash
 python scripts/run_eval.py                 # interactive scoring
 python scripts/run_eval.py --auto          # dump results, no scoring

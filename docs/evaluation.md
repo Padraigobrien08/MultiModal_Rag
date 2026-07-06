@@ -87,41 +87,88 @@ directly:
 - 🟡 `hit_rate >= 70%` but `pass_rate < 70%` — review the partials.
 - 🔴 otherwise — fix embedding/chunking before building further.
 
-## Sample result summary
+## Measured results — 2026-07-06
 
-Below is the **shape** of a completed interactive run (illustrative format, not
-measured numbers). Reproduce real numbers by running the eval yourself — see the
-next section.
+Scored run committed at
+[`scripts/eval_results_20260706.json`](../scripts/eval_results_20260706.json).
+Corpus indexed at eval time: **11 tutorials / 317 steps** (two of the 13 corpus
+videos failed to ingest; the index also held a few non-Stripe tutorials and two
+test entries — see failure mode 3). `top_k=3`, all 25 queries scored by hand.
 
-```
-============================================================
-RESULTS SUMMARY
-============================================================
+| Metric | Result |
+| ------ | ------ |
+| **Pass rate** | **52%** (13 / 25) |
+| **Hit rate** (pass + partial) | **76%** (19 / 25) |
+| ✅ PASS | 13 |
+| ⚠️ PARTIAL | 6 |
+| ❌ MISS | 6 |
+| 💥 ERROR | 0 |
+| Target | 70% pass rate |
 
-  ✅ PASS:    <n>  (<pass_rate>%)
-  ⚠️  PARTIAL: <n>
-  ❌ MISS:    <n>
+The pass rate is **below the 70% target**; the hit rate clears it. Read
+honestly, this says retrieval ranking is solid but corpus *coverage* is thin:
+when the answer exists in a tutorial, retrieval usually finds it (see webhooks,
+getting-started, integration below); most misses are questions the videos simply
+never answer.
 
-  Pass rate:     <pass_rate>%
-  Hit rate:      <hit_rate>%  (pass + partial)
-  Target:        70% pass rate
+### By topic
 
-  By topic:
-    account_setup         <pass>/<total>
-    payments              <pass>/<total>
-    ...
-```
+| Topic | Pass | Hit (pass+partial) | Total |
+| ----- | :--: | :----------------: | :---: |
+| webhooks        | 3 | 3 | 3 |
+| getting_started | 3 | 3 | 3 |
+| integration     | 1 | 1 | 1 |
+| payment_methods | 1 | 2 | 2 |
+| payment_links   | 1 | 2 | 2 |
+| account_setup   | 2 | 2 | 4 |
+| subscriptions   | 2 | 3 | 4 |
+| payouts         | 0 | 2 | 2 |
+| payments        | 0 | 1 | 4 |
+
+`payments` and `payouts` pull the average down: those buckets are dominated by
+operational tickets (refunds, double charges, declines, payout timing) that the
+how-to tutorials don't cover.
+
+### Failure examples
+
+| # | Query | Score | What happened |
+| - | ----- | :---: | ------------- |
+| q07 | *How do I cancel a customer's subscription?* | ❌ MISS | A cancel-capable step exists (Webhooks step 29: "update / **pause** / cancel") but wasn't ranked top-3 for this phrasing — even though the near-identical *pause* query (q08) surfaced it at #1. |
+| q09 | *How do I issue a refund to a customer?* | ❌ MISS | Zero steps returned. No refund content in the corpus. |
+| q10 | *A customer was charged twice — what do I do?* | ❌ MISS | Returned "Confirm Payment in the Dashboard"; no duplicate-charge/refund content exists. |
+| q17 | *How do I add a new team member?* | ❌ MISS | Returned sign-in / sign-up steps; no roles/permissions content in the corpus. |
+| q23 | *My customer's card was declined — what should I tell them?* | ❌ MISS | Zero steps returned. No decline-handling content. |
+| q13 | *When will my payout arrive?* | ⚠️ PARTIAL | Landed in the right payouts video, but the corpus covers schedule *configuration*, not arrival timing. |
+| q16 | *Can I accept payments without a website?* | ⚠️ PARTIAL | Answerable via Payment Links / Terminal, but the top hit was a generic platform-intro step, not the payment-link creation step. |
 
 Each run also writes a machine-readable artifact to
 `scripts/eval_results_<timestamp>.json` with a `scores` array (per-query
 `id` / `query` / `topic` / `score` / `note`) and a `summary` block
 (`pass` / `partial` / `miss` / `pass_rate` / `hit_rate`).
 
-**Last known result:** no scored run is committed to the repo yet. The
-`scripts/eval_results_*.json` artifacts currently checked in are `--auto`
-(unscored) inspection dumps, so their `pass_rate` is `0` by construction, not a
-measured score. Run the interactive harness to produce a citable pass rate and
-commit the resulting JSON next to this doc.
+## Known retrieval failure modes
+
+1. **Corpus-coverage gaps dominate.** Four of six misses are questions the
+   tutorials never answer — refunds (q09), duplicate charges (q10), card
+   declines (q23), team roles (q17), invoice downloads (q25). Retrieval
+   correctly returns nothing or an honest "not covered" answer, but from a
+   support user's view it's still a miss. The lever here is corpus breadth, not
+   the retriever.
+
+2. **Phrasing-sensitive ranking.** Near-identical intents can rank differently.
+   "Pause a subscription" (q08) surfaces the right step at #1; "cancel a
+   subscription" (q07) — answerable by the *same* step — pushes it out of the
+   top-3. HyDE narrows this gap but doesn't close it.
+
+3. **Cross-tutorial bleed.** The index also held a few non-Stripe tutorials
+   (Claude Code) and two test entries. On generic queries a foreign step can
+   slip into the top-3 (a Hostinger "API token" step appeared for "find my API
+   keys"). It rarely reaches #1, but it pollutes the tail — a reminder to keep
+   the index scoped to one product.
+
+4. **Generic intro steps outrank specific ones.** Broad "what is Stripe" /
+   platform-overview steps sometimes win on high-level questions (q16), burying
+   the concrete how-to step that actually answers the task.
 
 ## How to run the eval
 

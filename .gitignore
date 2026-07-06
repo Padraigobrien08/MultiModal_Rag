@@ -24,7 +24,9 @@ build/
 htmlcov/
 
 # ── Generated eval artifacts ──────────────────────────────────────────────────
+# Ad-hoc/timestamped runs stay local; the committed scored result below is proof.
 scripts/eval_results_*.json
+!scripts/eval_results_20260706.json
 
 # ── IDE & editor ──────────────────────────────────────────────────────────────
 .vscode/
