@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import uuid
@@ -94,7 +95,6 @@ def _canonical_url(url: str) -> str:
 
 _cors_origins = settings.cors_origin_list()
 if _cors_origins == ["*"] and settings.api_key:
-    import logging
     logging.getLogger(__name__).warning(
         "CORS is set to '*' while an API key is configured — set CORS_ORIGINS to "
         "explicit frontend origin(s) for production."
@@ -297,7 +297,6 @@ def _delete_tutorial_data(tutorial_id: str) -> None:
     try:
         delete_tutorial_vectors(tutorial_id)
     except Exception:
-        import logging
         logging.getLogger(__name__).warning(
             "ChromaDB vector cleanup failed for tutorial %s", tutorial_id, exc_info=True
         )
