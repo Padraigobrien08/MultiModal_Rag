@@ -178,3 +178,78 @@ def _index_vectors(tutorial: Tutorial) -> None:
         documents=[tutorial.title or ""],
         metadatas=[{"library_id": tutorial.library_id, "tutorial_id": tutorial.id}],
     )
+
+
+def delete_tutorial_vectors(tutorial_id: str) -> None:
+    """Remove every vector a tutorial owns from Chroma: step vectors and centroid.
+
+    Step vectors are deleted by ``tutorial_id`` metadata (not by a caller-supplied
+    step-id list) so a reingest cannot leave orphaned step vectors behind even if
+    the step ids changed. The centroid is keyed by tutorial id.
+    """
+    chroma = _get_chroma()
+    steps_col = chroma.get_or_create_collection("steps")
+    steps_col.delete(where={"tutorial_id": tutorial_id})
+    centroids_col = chroma.get_or_create_collection("tutorial_centroids")
+    centroids_col.delete(ids=[tutorial_id])
+
+
+def check_vector_consistency() -> dict:
+    """Cross-check SQLite rows against Chroma vectors and report drift.
+
+    Buckets:
+      - ``tutorials_missing_vectors``: tutorials with steps in SQLite whose step
+        vectors are absent from Chroma.
+      - ``vectors_missing_sqlite``: step-vector ids in Chroma with no SQLite row.
+      - ``stale_centroids``: centroids whose tutorial no longer exists in SQLite
+        or that have no backing step vectors.
+    """
+    chroma = _get_chroma()
+    steps_col = chroma.get_or_create_collection("steps")
+    centroids_col = chroma.get_or_create_collection("tutorial_centroids")
+
+    steps_data = steps_col.get(include=["metadatas"])
+    vector_step_ids = set(steps_data["ids"])
+    vector_tutorial_ids = {
+        m["tutorial_id"]
+        for m in steps_data["metadatas"]
+        if m and m.get("tutorial_id")
+    }
+    centroid_ids = set(centroids_col.get()["ids"])
+
+    with get_db_session() as session:
+        tutorials = session.query(TutorialDB).all()
+        sqlite_tutorial_ids = set()
+        sqlite_step_ids: set[str] = set()
+        tutorial_step_ids: dict[str, list[str]] = {}
+        for t in tutorials:
+            sqlite_tutorial_ids.add(t.id)
+            step_ids = [s.id for s in t.steps]
+            tutorial_step_ids[t.id] = step_ids
+            sqlite_step_ids.update(step_ids)
+
+    tutorials_missing_vectors = []
+    for tid, step_ids in tutorial_step_ids.items():
+        if not step_ids:
+            continue  # no steps → nothing to embed
+        missing = [sid for sid in step_ids if sid not in vector_step_ids]
+        if missing:
+            tutorials_missing_vectors.append(
+                {"tutorial_id": tid, "missing_step_ids": missing}
+            )
+
+    vectors_missing_sqlite = sorted(vector_step_ids - sqlite_step_ids)
+    stale_centroids = sorted(
+        cid
+        for cid in centroid_ids
+        if cid not in sqlite_tutorial_ids or cid not in vector_tutorial_ids
+    )
+
+    return {
+        "ok": not (
+            tutorials_missing_vectors or vectors_missing_sqlite or stale_centroids
+        ),
+        "tutorials_missing_vectors": tutorials_missing_vectors,
+        "vectors_missing_sqlite": vectors_missing_sqlite,
+        "stale_centroids": stale_centroids,
+    }

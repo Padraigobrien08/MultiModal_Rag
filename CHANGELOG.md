@@ -64,6 +64,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Vector lifecycle consistency: deleting or reingesting a tutorial now removes
+  both its step vectors and its `tutorial_centroids` entry from Chroma (previously
+  the centroid was orphaned, leaving stale data in the retrieval pre-filter).
+  Step vectors are deleted by `tutorial_id` so a reingest cannot leave stale
+  vectors behind even when step IDs change. Added a `stepwise check` CLI command
+  and `GET /admin/consistency` endpoint that report SQLite↔Chroma drift.
 - Cleaned the lint/build verification baseline (ruff, ESLint, Next build) with
   no changes to application behavior.
 
