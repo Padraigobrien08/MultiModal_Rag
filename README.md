@@ -236,7 +236,9 @@ stepwise query "how do I configure an API key?"
 | `GET` | `/gaps?force=true` | Detect coverage gaps from query logs |
 | `GET` | `/admin/query-logs` · `/admin/stats` | Retrieval telemetry |
 | `GET` | `/admin/consistency` | SQLite↔Chroma vector drift report (see below) |
-| `GET` | `/jobs` · `/jobs/{id}` | Background ingestion job status (with `created_at` / `updated_at` / `completed_at`) |
+| `GET` | `/jobs` · `/jobs/{id}` | Background ingestion job status; the detail view adds source metadata, `started_at`, a `retryable` flag, and an `events` log of each stage |
+| `POST` | `/jobs/{id}/retry` | Re-run a failed/cancelled job — supported only for YouTube jobs whose input is re-fetchable |
+| `POST` | `/jobs/{id}/cancel` | Cancel a job — pending jobs stop immediately; a running job is marked cancelled and stops at its next stage boundary (in-flight work isn't force-killed) |
 | `GET` | `/health` | Liveness — always cheap, no dependency checks |
 | `GET` | `/ready` | Readiness — verifies DB writability + Chroma reachability (no ML models); `503` when a dependency is down |
 

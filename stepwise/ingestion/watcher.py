@@ -173,7 +173,17 @@ def poll_watcher(watcher: "WatcherDB", session, background_tasks) -> list[str]:
             continue
 
         job_id = str(uuid.uuid4())
-        session.add(JobDB(id=job_id, status="pending", library_id=library_id))
+        _job_source_type = {
+            "youtube_channel": "youtube",
+            "drive_folder": "drive",
+            "notion_database": "notion",
+            "notion_page": "notion",
+        }.get(watcher.source_type, watcher.source_type)
+        session.add(JobDB(
+            id=job_id, status="pending", library_id=library_id,
+            source_type=_job_source_type,
+            source_url=item["url"], title=item["title"],
+        ))
 
         # Dispatch the right background task per source type
         if watcher.source_type == "youtube_channel":

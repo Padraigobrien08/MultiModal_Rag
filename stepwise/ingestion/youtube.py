@@ -109,14 +109,23 @@ def _extract_frames(video_id: str, output_dir: Path, interval: int) -> list[dict
     return dedup_frames(frames)
 
 
-def ingest_youtube(url: str) -> dict:
+def ingest_youtube(url: str, tracker=None) -> dict:
     """
     Ingest a YouTube URL. Returns raw artifacts:
     {video_id, transcript: [{text, start, duration}], frames: [{path, timestamp}]}
+
+    `tracker` is an optional JobTracker used only to emit stage events; it is
+    duck-typed so this module stays free of a pipeline import.
     """
     video_id = _extract_video_id(url)
+    if tracker:
+        tracker.set_stage("downloading", f"Resolving video {video_id}")
     title = _get_title(video_id)
+    if tracker:
+        tracker.set_stage("transcribing")
     transcript = _get_transcript(video_id)
+    if tracker:
+        tracker.set_stage("extracting_frames")
     frames = _extract_frames(video_id, settings.frames_dir, settings.frame_interval_seconds)
 
     return {
