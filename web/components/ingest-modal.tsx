@@ -28,7 +28,7 @@ function parseNotionId(input: string): string {
   return input.trim();
 }
 
-export function IngestModal({ onClose }: { onClose: () => void }) {
+export function IngestModal({ onClose, libraryId }: { onClose: () => void; libraryId: string }) {
   const [tab, setTab] = useState<Tab>("youtube");
   // YouTube
   const [url, setUrl] = useState("");
@@ -73,7 +73,7 @@ export function IngestModal({ onClose }: { onClose: () => void }) {
       const res = await fetch("/api/ingest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: url.trim(), title: title.trim() || undefined }),
+        body: JSON.stringify({ url: url.trim(), title: title.trim() || undefined, library_id: libraryId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail ?? "Failed");
@@ -95,6 +95,7 @@ export function IngestModal({ onClose }: { onClose: () => void }) {
     setLoading(true);
     const form = new FormData();
     form.append("title", imageTitle.trim());
+    form.append("library_id", libraryId);
     for (const f of Array.from(files)) form.append("files", f);
     try {
       const res = await fetch("/api/ingest/images", { method: "POST", body: form });
@@ -120,6 +121,7 @@ export function IngestModal({ onClose }: { onClose: () => void }) {
           page_id: pageId,
           notion_token: notionToken.trim(),
           title: notionTitle.trim() || undefined,
+          library_id: libraryId,
         }),
       });
       const data = await res.json();

@@ -158,36 +158,46 @@ def poll_watcher(watcher: "WatcherDB", session, background_tasks) -> list[str]:
     if not items:
         return []
 
+    library_id = watcher.library_id or "local"
     new_job_ids: list[str] = []
     latest_modified = watcher.last_seen_at or ""
 
     for item in items:
-        # Skip already-ingested content (check by source URL)
-        existing = session.query(TutorialDB).filter_by(source_url=item["url"]).first()
+        # Skip content already ingested into this library (check by source URL)
+        existing = (
+            session.query(TutorialDB)
+            .filter_by(source_url=item["url"], library_id=library_id)
+            .first()
+        )
         if existing:
             continue
 
         job_id = str(uuid.uuid4())
-        session.add(JobDB(id=job_id, status="pending"))
+        session.add(JobDB(id=job_id, status="pending", library_id=library_id))
 
         # Dispatch the right background task per source type
         if watcher.source_type == "youtube_channel":
             from stepwise.ingestion.tasks import run_youtube_ingestion
-            background_tasks.add_task(run_youtube_ingestion, job_id, item["url"], item["title"])
+            background_tasks.add_task(
+                run_youtube_ingestion, job_id, item["url"], item["title"],
+                library_id=library_id,
+            )
 
         elif watcher.source_type == "drive_folder":
             cfg = watcher.config_json or {}
             meta = item["_drive_meta"]
             from stepwise.ingestion.tasks import run_drive_ingestion_from_meta
             background_tasks.add_task(
-                run_drive_ingestion_from_meta, job_id, meta, cfg["token_path"]
+                run_drive_ingestion_from_meta, job_id, meta, cfg["token_path"],
+                library_id=library_id,
             )
 
         elif watcher.source_type in ("notion_database", "notion_page"):
             cfg = watcher.config_json or {}
             from stepwise.ingestion.tasks import run_notion_ingestion
             background_tasks.add_task(
-                run_notion_ingestion, job_id, item["id"], item["title"], cfg["notion_token"]
+                run_notion_ingestion, job_id, item["id"], item["title"],
+                cfg["notion_token"], library_id=library_id,
             )
 
         new_job_ids.append(job_id)

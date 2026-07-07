@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     chroma_path: Path = Path("./data/chroma")
     frames_dir: Path = Path("./data/frames")
 
+    # Default library ("workspace") — everything lands here unless a library_id
+    # is supplied, preserving single-library behaviour with no configuration.
+    default_library_id: str = "local"
+    default_library_name: str = "Local"
+
     model_config = {"env_file": ".env", "populate_by_name": True}
 
     frame_interval_seconds: int = 5

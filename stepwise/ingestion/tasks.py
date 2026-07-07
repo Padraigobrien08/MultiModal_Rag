@@ -15,12 +15,15 @@ from stepwise.ingestion.pipeline import (
     run_ingestion_pipeline,
     video_consolidation_target,
 )
-from stepwise.models import Segment
+from stepwise.models import DEFAULT_LIBRARY_ID, Segment
 
 log = logging.getLogger(__name__)
 
 
-def run_youtube_ingestion(job_id: str, url: str, title: Optional[str] = None) -> None:
+def run_youtube_ingestion(
+    job_id: str, url: str, title: Optional[str] = None,
+    library_id: str = DEFAULT_LIBRARY_ID,
+) -> None:
     tracker = JobTracker(job_id)
     try:
         tracker.start_running("downloading")
@@ -34,6 +37,7 @@ def run_youtube_ingestion(job_id: str, url: str, title: Optional[str] = None) ->
             transcript=artifacts["transcript"],
             frames=artifacts["frames"],
             tutorial_id=tutorial_id,
+            library_id=library_id,
             job_id=job_id,
             consolidation_target_fn=video_consolidation_target,
         )
@@ -42,7 +46,9 @@ def run_youtube_ingestion(job_id: str, url: str, title: Optional[str] = None) ->
         raise
 
 
-def run_drive_ingestion(job_id: str, req: dict) -> None:
+def run_drive_ingestion(
+    job_id: str, req: dict, library_id: str = DEFAULT_LIBRARY_ID
+) -> None:
     tracker = JobTracker(job_id)
     try:
         tracker.start_running("aligning")
@@ -58,6 +64,7 @@ def run_drive_ingestion(job_id: str, req: dict) -> None:
             transcript=req["transcript"],
             frames=req["frames"],
             tutorial_id=tutorial_id,
+            library_id=req.get("library_id", library_id),
             job_id=job_id,
             consolidation_target_fn=video_consolidation_target,
         )
@@ -66,7 +73,10 @@ def run_drive_ingestion(job_id: str, req: dict) -> None:
         raise
 
 
-def run_image_ingestion(job_id: str, files: list[tuple[str, bytes]], title: str) -> None:
+def run_image_ingestion(
+    job_id: str, files: list[tuple[str, bytes]], title: str,
+    library_id: str = DEFAULT_LIBRARY_ID,
+) -> None:
     tracker = JobTracker(job_id)
     try:
         tracker.start_running("processing")
@@ -96,6 +106,7 @@ def run_image_ingestion(job_id: str, files: list[tuple[str, bytes]], title: str)
             transcript=[],
             frames=[],
             tutorial_id=tutorial_id,
+            library_id=library_id,
             job_id=job_id,
             segments=segments,
             consolidation_target_fn=consolidation_fn,
@@ -107,7 +118,8 @@ def run_image_ingestion(job_id: str, files: list[tuple[str, bytes]], title: str)
 
 
 def run_notion_ingestion_api(
-    job_id: str, page_id: str, title: Optional[str], notion_token: str
+    job_id: str, page_id: str, title: Optional[str], notion_token: str,
+    library_id: str = DEFAULT_LIBRARY_ID,
 ) -> None:
     from stepwise.ingestion.notion import ingest_notion_page
 
@@ -123,14 +135,15 @@ def run_notion_ingestion_api(
             "frames": artifacts["frames"],
             "source_type": "notion",
             "embedded_video_urls": artifacts.get("embedded_video_urls", []),
-        })
+        }, library_id=library_id)
     except Exception as exc:
         tracker.fail(str(exc))
         raise
 
 
 def run_drive_ingestion_from_meta(
-    job_id: str, file_meta: dict, token_path_str: str | None = None
+    job_id: str, file_meta: dict, token_path_str: str | None = None,
+    library_id: str = DEFAULT_LIBRARY_ID,
 ) -> None:
     from stepwise.ingestion.drive import ingest_drive_file
 
@@ -142,10 +155,13 @@ def run_drive_ingestion_from_meta(
         "video_id": artifacts["video_id"],
         "transcript": artifacts["transcript"],
         "frames": artifacts["frames"],
-    })
+    }, library_id=library_id)
 
 
-def run_notion_ingestion(job_id: str, page_id: str, title: str, notion_token: str) -> None:
+def run_notion_ingestion(
+    job_id: str, page_id: str, title: str, notion_token: str,
+    library_id: str = DEFAULT_LIBRARY_ID,
+) -> None:
     from stepwise.ingestion.notion import ingest_notion_page
 
     artifacts = ingest_notion_page(page_id, notion_token)
@@ -157,4 +173,4 @@ def run_notion_ingestion(job_id: str, page_id: str, title: str, notion_token: st
         "frames": artifacts["frames"],
         "source_type": "notion",
         "embedded_video_urls": artifacts.get("embedded_video_urls", []),
-    })
+    }, library_id=library_id)

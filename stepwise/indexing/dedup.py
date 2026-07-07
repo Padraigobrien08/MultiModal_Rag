@@ -27,11 +27,11 @@ _OVERLAP_THRESHOLD = 0.5
 _SAMPLE_SIZE = 20
 
 
-def check_tutorial_overlap(tutorial_id: str) -> None:
+def check_tutorial_overlap(tutorial_id: str, library_id: str) -> None:
     """
-    Background task: compare the new tutorial's steps against the existing index.
-    Writes `meta.potential_duplicate_of = <other_tutorial_id>` if significant
-    overlap is detected. Safe to call multiple times — idempotent.
+    Background task: compare the new tutorial's steps against the existing index
+    within the same library. Writes `meta.potential_duplicate_of = <other_tutorial_id>`
+    if significant overlap is detected. Safe to call multiple times — idempotent.
     """
     try:
         col = _get_chroma().get_or_create_collection("steps")
@@ -57,6 +57,7 @@ def check_tutorial_overlap(tutorial_id: str) -> None:
             neighbors = col.query(
                 query_embeddings=[emb],
                 n_results=3,
+                where={"library_id": {"$eq": library_id}},
                 include=["metadatas", "distances"],
             )
             for meta, dist in zip(

@@ -74,12 +74,12 @@ def _hypothetical_step(query: str, history: list[dict]) -> str:
 # ── Tutorial pre-filter ───────────────────────────────────────────────────────
 
 def _relevant_tutorial_ids(
-    query_embedding: list[float], exclude_id: str | None
+    query_embedding: list[float], library_id: str, exclude_id: str | None
 ) -> list[str] | None:
-    """Return tutorial IDs to restrict search to, or None (search all).
+    """Return tutorial IDs to restrict search to, or None (search all in library).
 
-    Queries the tutorial_centroids collection. If no centroid is close enough,
-    returns None so the full step collection is searched.
+    Queries the tutorial_centroids collection, scoped to ``library_id``. If no
+    centroid is close enough, returns None so the whole library is searched.
     """
     centroids_col = _get_chroma().get_or_create_collection("tutorial_centroids")
     if centroids_col.count() == 0:
@@ -89,6 +89,7 @@ def _relevant_tutorial_ids(
     results = centroids_col.query(
         query_embeddings=[query_embedding],
         n_results=n,
+        where={"library_id": {"$eq": library_id}},
         include=["metadatas", "distances"],
     )
     if not results["ids"][0]:
@@ -118,6 +119,7 @@ def _make_query_embedding(text_emb: np.ndarray) -> np.ndarray:
 
 def _chromadb_lookup(
     query: str,
+    library_id: str,
     tutorial_id: str | None,
     top_k: int,
     history: list[dict],
@@ -125,6 +127,7 @@ def _chromadb_lookup(
     """Return (docs, metas, distances, timing_meta).
 
     Pipeline: HyDE → pre-filter → fetch → cross-encode → dedup.
+    All retrieval is confined to ``library_id``.
     """
     t0 = time.monotonic()
 
@@ -137,19 +140,22 @@ def _chromadb_lookup(
 
     collection = _get_chroma().get_or_create_collection("steps")
 
-    # Determine the where clause
+    # Determine the where clause — every branch is scoped to the library.
+    lib_clause = {"library_id": {"$eq": library_id}}
     tutorial_ids_searched = None
     if tutorial_id:
-        where = {"tutorial_id": {"$eq": tutorial_id}}
+        where = {"$and": [lib_clause, {"tutorial_id": {"$eq": tutorial_id}}]}
     else:
-        relevant_ids = _relevant_tutorial_ids(query_embedding, exclude_id=tutorial_id)
+        relevant_ids = _relevant_tutorial_ids(
+            query_embedding, library_id, exclude_id=tutorial_id
+        )
         tutorial_ids_searched = relevant_ids
         if relevant_ids and len(relevant_ids) == 1:
-            where = {"tutorial_id": {"$eq": relevant_ids[0]}}
+            where = {"$and": [lib_clause, {"tutorial_id": {"$eq": relevant_ids[0]}}]}
         elif relevant_ids:
-            where = {"tutorial_id": {"$in": relevant_ids}}
+            where = {"$and": [lib_clause, {"tutorial_id": {"$in": relevant_ids}}]}
         else:
-            where = None
+            where = lib_clause
 
     results = collection.query(
         query_embeddings=[query_embedding],
@@ -258,6 +264,7 @@ def _build_steps_out(
 
 def _write_query_log(
     query: str,
+    library_id: str,
     tutorial_id: str | None,
     history: list[dict],
     metas: list[dict],
@@ -281,6 +288,7 @@ def _write_query_log(
         with get_db_session() as session:
             session.add(QueryLogDB(
                 id=str(uuid.uuid4()),
+                library_id=library_id,
                 query_text=query,
                 hypothetical_text=timing.get("hypothetical_text"),
                 tutorial_scoped=tutorial_id,
@@ -314,6 +322,7 @@ def _build_synthesis_messages(context: str, query: str, history: list[dict]) -> 
 
 def query_steps_stream(
     query: str,
+    library_id: str = settings.default_library_id,
     tutorial_id: str | None = None,
     top_k: int = TOP_K,
     history: list[dict] | None = None,
@@ -322,11 +331,13 @@ def query_steps_stream(
     history = history or []
     t_start = time.monotonic()
 
-    docs, metas, distances, timing = _chromadb_lookup(query, tutorial_id, top_k, history)
+    docs, metas, distances, timing = _chromadb_lookup(
+        query, library_id, tutorial_id, top_k, history
+    )
 
     if not docs:
         yield f"data: {json.dumps({'type': 'steps', 'steps': []})}\n\n"
-        _write_query_log(query, tutorial_id, history, [], [], timing, "", 0,
+        _write_query_log(query, library_id, tutorial_id, history, [], [], timing, "", 0,
                          int((time.monotonic() - t_start) * 1000))
         return
 
@@ -358,7 +369,7 @@ def query_steps_stream(
 
     latency_synthesis = int((time.monotonic() - t_synth) * 1000)
     total_latency = int((time.monotonic() - t_start) * 1000)
-    _write_query_log(query, tutorial_id, history, metas, distances, timing,
+    _write_query_log(query, library_id, tutorial_id, history, metas, distances, timing,
                      "".join(answer_parts), latency_synthesis, total_latency)
 
     yield f"data: {json.dumps({'type': 'done'})}\n\n"
@@ -366,6 +377,7 @@ def query_steps_stream(
 
 def query_steps(
     query: str,
+    library_id: str = settings.default_library_id,
     tutorial_id: str | None = None,
     top_k: int = TOP_K,
     history: list[dict] | None = None,
@@ -373,10 +385,12 @@ def query_steps(
     """Synchronous version (used by Zendesk sidebar and tests)."""
     history = history or []
     t_start = time.monotonic()
-    docs, metas, distances, timing = _chromadb_lookup(query, tutorial_id, top_k, history)
+    docs, metas, distances, timing = _chromadb_lookup(
+        query, library_id, tutorial_id, top_k, history
+    )
 
     if not docs:
-        _write_query_log(query, tutorial_id, history, [], [], timing, "", 0,
+        _write_query_log(query, library_id, tutorial_id, history, [], [], timing, "", 0,
                          int((time.monotonic() - t_start) * 1000))
         return {"answer": "No relevant steps found.", "steps": []}
 
@@ -399,6 +413,6 @@ def query_steps(
     )
     answer = response.content[0].text.strip()
     latency_synthesis = int((time.monotonic() - t_synth) * 1000)
-    _write_query_log(query, tutorial_id, history, metas, distances, timing,
+    _write_query_log(query, library_id, tutorial_id, history, metas, distances, timing,
                      answer, latency_synthesis, int((time.monotonic() - t_start) * 1000))
     return {"answer": answer, "steps": steps_out}
