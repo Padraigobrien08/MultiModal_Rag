@@ -18,6 +18,7 @@ from stepwise.api.middleware import APIKeyMiddleware, RequestIDMiddleware
 from stepwise.config import settings
 from stepwise.indexing import get_db_session
 from stepwise.indexing.indexer import check_vector_consistency, delete_tutorial_vectors
+from stepwise.ingestion.pipeline import JobTracker
 from stepwise.ingestion.tasks import (
     run_drive_ingestion,
     run_image_ingestion,
@@ -208,7 +209,10 @@ def ingest(req: IngestRequest, background_tasks: BackgroundTasks) -> dict:
 
     job_id = str(uuid.uuid4())
     with get_db_session() as session:
-        session.add(JobDB(id=job_id, status="pending", library_id=req.library_id))
+        session.add(JobDB(
+            id=job_id, status="pending", library_id=req.library_id,
+            source_type="youtube", source_url=req.url, title=req.title,
+        ))
         session.commit()
 
     background_tasks.add_task(
@@ -217,25 +221,63 @@ def ingest(req: IngestRequest, background_tasks: BackgroundTasks) -> dict:
     return {"job_id": job_id}
 
 
+def _job_summary(job: JobDB) -> dict:
+    """Fields shared by the job list and job detail responses."""
+    return {
+        "job_id": job.id,
+        "library_id": job.library_id,
+        "status": job.status,
+        "stage": job.stage,
+        "segments_done": job.segments_done,
+        "segments_total": job.segments_total,
+        "tutorial_id": job.tutorial_id,
+        "step_count": job.step_count,
+        "error": job.error,
+        "source_type": job.source_type,
+        "source_url": job.source_url,
+        "title": job.title,
+        "created_at": job.created_at.isoformat() if job.created_at else None,
+        "updated_at": job.updated_at.isoformat() if job.updated_at else None,
+        "started_at": job.started_at.isoformat() if job.started_at else None,
+        "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+    }
+
+
+def _job_is_retryable(job: JobDB) -> bool:
+    """A job can be re-run automatically only when its inputs are re-fetchable.
+
+    That currently means YouTube jobs (re-downloaded from the stored URL).
+    Drive/image/Notion jobs can't be retried here because their inputs (uploaded
+    files, pre-fetched transcripts, or credentials) aren't persisted.
+    """
+    return job.source_type == "youtube" and bool(job.source_url)
+
+
 @app.get("/jobs/{job_id}")
 def get_job(job_id: str) -> dict:
+    from stepwise.models import JobEventDB
     with get_db_session() as session:
         job = session.get(JobDB, job_id)
         if not job:
             raise HTTPException(status_code=404, detail="Job not found")
-        return {
-            "job_id": job.id,
-            "status": job.status,
-            "stage": job.stage,
-            "segments_done": job.segments_done,
-            "segments_total": job.segments_total,
-            "tutorial_id": job.tutorial_id,
-            "step_count": job.step_count,
-            "error": job.error,
-            "created_at": job.created_at.isoformat() if job.created_at else None,
-            "updated_at": job.updated_at.isoformat() if job.updated_at else None,
-            "completed_at": job.completed_at.isoformat() if job.completed_at else None,
-        }
+        events = (
+            session.query(JobEventDB)
+            .filter(JobEventDB.job_id == job_id)
+            .order_by(JobEventDB.created_at.asc(), JobEventDB.id.asc())
+            .all()
+        )
+        detail = _job_summary(job)
+        detail["retryable"] = _job_is_retryable(job)
+        detail["events"] = [
+            {
+                "stage": e.stage,
+                "level": e.level,
+                "message": e.message,
+                "created_at": e.created_at.isoformat() if e.created_at else None,
+            }
+            for e in events
+        ]
+        return detail
 
 
 @app.get("/tutorials/{tutorial_id}")
@@ -331,7 +373,10 @@ def reingest_tutorial(tutorial_id: str, background_tasks: BackgroundTasks) -> di
 
     job_id = str(uuid.uuid4())
     with get_db_session() as session:
-        session.add(JobDB(id=job_id, status="pending", library_id=library_id))
+        session.add(JobDB(
+            id=job_id, status="pending", library_id=library_id,
+            source_type="youtube", source_url=url, title=title,
+        ))
         session.commit()
 
     background_tasks.add_task(
@@ -374,7 +419,10 @@ async def ingest_images_endpoint(
 
     job_id = str(uuid.uuid4())
     with get_db_session() as session:
-        session.add(JobDB(id=job_id, status="pending", library_id=library_id))
+        session.add(JobDB(
+            id=job_id, status="pending", library_id=library_id,
+            source_type="images", source_url=f"images://{title}", title=title,
+        ))
         session.commit()
 
     background_tasks.add_task(
@@ -398,7 +446,10 @@ def ingest_notion_endpoint(req: NotionIngestRequest, background_tasks: Backgroun
 
     job_id = str(uuid.uuid4())
     with get_db_session() as session:
-        session.add(JobDB(id=job_id, status="pending", library_id=req.library_id))
+        session.add(JobDB(
+            id=job_id, status="pending", library_id=req.library_id,
+            source_type="notion", source_url=notion_url, title=req.title,
+        ))
         session.commit()
 
     background_tasks.add_task(
@@ -422,7 +473,10 @@ def ingest_drive_endpoint(req: DriveIngestRequest, background_tasks: BackgroundT
 
     job_id = str(uuid.uuid4())
     with get_db_session() as session:
-        session.add(JobDB(id=job_id, status="pending", library_id=req.library_id))
+        session.add(JobDB(
+            id=job_id, status="pending", library_id=req.library_id,
+            source_type="drive", source_url=req.source_url, title=req.title,
+        ))
         session.commit()
 
     background_tasks.add_task(
@@ -448,22 +502,82 @@ def list_jobs(
             statuses = status.split(",")
             q = q.filter(JobDB.status.in_(statuses))
         jobs = q.limit(limit).all()
-        return [
-            {
-                "job_id": j.id,
-                "status": j.status,
-                "stage": j.stage,
-                "segments_done": j.segments_done,
-                "segments_total": j.segments_total,
-                "tutorial_id": j.tutorial_id,
-                "step_count": j.step_count,
-                "error": j.error,
-                "created_at": j.created_at.isoformat() if j.created_at else None,
-                "updated_at": j.updated_at.isoformat() if j.updated_at else None,
-                "completed_at": j.completed_at.isoformat() if j.completed_at else None,
-            }
-            for j in jobs
-        ]
+        return [_job_summary(j) for j in jobs]
+
+
+@app.post("/jobs/{job_id}/retry", status_code=202)
+def retry_job(job_id: str, background_tasks: BackgroundTasks) -> dict:
+    """Re-run a failed or cancelled job in place.
+
+    Only supported for jobs whose inputs are re-fetchable (YouTube). The existing
+    job row is reset to pending and re-dispatched so the Library keeps one entry.
+    """
+    with get_db_session() as session:
+        job = session.get(JobDB, job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+        if job.status not in ("error", "cancelled"):
+            raise HTTPException(
+                status_code=409,
+                detail=f"Only failed or cancelled jobs can be retried (job is {job.status})",
+            )
+        if not _job_is_retryable(job):
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "This job can't be retried automatically because its source content "
+                    "(uploaded files, transcripts, or credentials) wasn't stored. "
+                    "Re-submit it from the original source."
+                ),
+            )
+        url, title, library_id = job.source_url, job.title, job.library_id
+        job.status = "pending"
+        job.stage = None
+        job.error = None
+        job.started_at = None
+        job.completed_at = None
+        job.segments_done = None
+        job.segments_total = None
+        job.tutorial_id = None
+        job.step_count = None
+        session.commit()
+
+    JobTracker(job_id).log_event("Retry requested", level="info")
+    background_tasks.add_task(run_youtube_ingestion, job_id, url, title, library_id=library_id)
+    return {"job_id": job_id, "status": "pending"}
+
+
+@app.post("/jobs/{job_id}/cancel")
+def cancel_job(job_id: str) -> dict:
+    """Cancel a pending or running job.
+
+    Pending jobs are cancelled immediately. A running job is marked cancelled and
+    stops at its next stage boundary — work already in flight (a download or a
+    model call) isn't forcibly interrupted, so it may run a little longer.
+    """
+    with get_db_session() as session:
+        job = session.get(JobDB, job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+        if job.status not in ("pending", "running"):
+            raise HTTPException(
+                status_code=409,
+                detail=f"Job is already {job.status} and can't be cancelled",
+            )
+        was_running = job.status == "running"
+        job.status = "cancelled"
+        if not was_running:
+            job.stage = None
+            job.completed_at = datetime.now(timezone.utc)
+        session.commit()
+
+    JobTracker(job_id).log_event("Cancellation requested", level="warning")
+    note = (
+        "Job marked cancelled; it will stop at the next stage boundary."
+        if was_running
+        else "Pending job cancelled."
+    )
+    return {"job_id": job_id, "status": "cancelled", "note": note}
 
 
 @app.post("/watchers", status_code=201)

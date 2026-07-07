@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 
@@ -134,10 +135,13 @@ function JobCard({ job }: { job: Job }) {
         </a>
       )}
 
-      {/* Job ID */}
-      <p className="text-[10px] font-mono text-muted-foreground/30 truncate">
-        {job.job_id}
-      </p>
+      {/* Job ID → detail view */}
+      <Link
+        href={`/jobs/${job.job_id}`}
+        className="text-[10px] font-mono text-muted-foreground/40 hover:text-primary truncate transition-colors"
+      >
+        {job.job_id} · details →
+      </Link>
     </div>
   );
 }

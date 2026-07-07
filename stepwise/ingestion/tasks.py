@@ -9,7 +9,9 @@ from typing import Optional
 
 from stepwise.config import settings
 from stepwise.ingestion import ingest_images, ingest_youtube
+from stepwise.ingestion.errors import humanize_error
 from stepwise.ingestion.pipeline import (
+    JobCancelled,
     JobTracker,
     image_consolidation_target,
     run_ingestion_pipeline,
@@ -27,7 +29,7 @@ def run_youtube_ingestion(
     tracker = JobTracker(job_id)
     try:
         tracker.start_running("downloading")
-        artifacts = ingest_youtube(url)
+        artifacts = ingest_youtube(url, tracker=tracker)
         tutorial_id = str(uuid.uuid4())
         run_ingestion_pipeline(
             source_url=url,
@@ -41,8 +43,10 @@ def run_youtube_ingestion(
             job_id=job_id,
             consolidation_target_fn=video_consolidation_target,
         )
+    except JobCancelled:
+        tracker.mark_cancelled()
     except Exception as exc:
-        tracker.fail(str(exc))
+        tracker.fail(humanize_error(exc))
         raise
 
 
@@ -68,8 +72,10 @@ def run_drive_ingestion(
             job_id=job_id,
             consolidation_target_fn=video_consolidation_target,
         )
+    except JobCancelled:
+        tracker.mark_cancelled()
     except Exception as exc:
-        tracker.fail(str(exc))
+        tracker.fail(humanize_error(exc))
         raise
 
 
@@ -112,8 +118,10 @@ def run_image_ingestion(
             consolidation_target_fn=consolidation_fn,
             image_mode=True,
         )
+    except JobCancelled:
+        tracker.mark_cancelled()
     except Exception as exc:
-        tracker.fail(str(exc))
+        tracker.fail(humanize_error(exc))
         raise
 
 
@@ -136,8 +144,10 @@ def run_notion_ingestion_api(
             "source_type": "notion",
             "embedded_video_urls": artifacts.get("embedded_video_urls", []),
         }, library_id=library_id)
+    except JobCancelled:
+        tracker.mark_cancelled()
     except Exception as exc:
-        tracker.fail(str(exc))
+        tracker.fail(humanize_error(exc))
         raise
 
 

@@ -10,7 +10,7 @@ from stepwise.alignment import align_segments
 from stepwise.indexing import index_tutorial
 from stepwise.indexing.dedup import check_tutorial_overlap
 from stepwise.indexing.indexer import get_db_session
-from stepwise.models import DEFAULT_LIBRARY_ID, JobDB, Segment, Step, Tutorial
+from stepwise.models import DEFAULT_LIBRARY_ID, JobDB, JobEventDB, Segment, Step, Tutorial
 from stepwise.structuring import structure_segment
 from stepwise.structuring.consolidator import consolidate_steps
 from stepwise.structuring.deduplicator import deduplicate_steps
@@ -19,13 +19,56 @@ from stepwise.structuring.trivial_filter import filter_trivial_steps
 log = logging.getLogger(__name__)
 
 
+# Human-readable event message for each stage, used when the caller doesn't
+# supply an explicit one.
+_STAGE_MESSAGES = {
+    "downloading": "Downloading source video",
+    "transcribing": "Extracting transcript",
+    "extracting_frames": "Extracting frames",
+    "aligning": "Aligning transcript with frames",
+    "structuring": "Extracting steps",
+    "consolidating": "Consolidating steps",
+    "indexing": "Indexing into the vector store",
+    "fetching": "Fetching source content",
+    "processing": "Processing images",
+}
+
+
+class JobCancelled(Exception):
+    """Raised inside the pipeline when a job has been cancelled cooperatively."""
+
+
 class JobTracker:
     """Optional progress reporting for background ingestion jobs."""
 
     def __init__(self, job_id: str | None = None):
         self.job_id = job_id
 
-    def set_stage(self, stage: str) -> None:
+    def log_event(self, message: str, *, level: str = "info", stage: str | None = None) -> None:
+        """Append a job event. No-op when this tracker isn't bound to a job."""
+        if not self.job_id:
+            return
+        with get_db_session() as session:
+            session.add(
+                JobEventDB(job_id=self.job_id, stage=stage, level=level, message=message)
+            )
+            session.commit()
+
+    def raise_if_cancelled(self) -> None:
+        """Raise JobCancelled if the job has been marked cancelled out-of-band.
+
+        Called at stage boundaries so a cancel request stops the job at the next
+        checkpoint. Running work already in flight isn't forcibly interrupted.
+        """
+        if not self.job_id:
+            return
+        with get_db_session() as session:
+            job = session.get(JobDB, self.job_id)
+            if job and job.status == "cancelled":
+                raise JobCancelled()
+
+    def set_stage(self, stage: str, message: str | None = None) -> None:
+        self.raise_if_cancelled()
         if not self.job_id:
             return
         with get_db_session() as session:
@@ -33,8 +76,10 @@ class JobTracker:
             if job:
                 job.stage = stage
                 session.commit()
+        self.log_event(message or _STAGE_MESSAGES.get(stage, f"Stage: {stage}"), stage=stage)
 
     def start_running(self, stage: str = "aligning") -> None:
+        self.raise_if_cancelled()
         if not self.job_id:
             return
         with get_db_session() as session:
@@ -42,7 +87,10 @@ class JobTracker:
             if job:
                 job.status = "running"
                 job.stage = stage
+                if job.started_at is None:
+                    job.started_at = datetime.now(timezone.utc)
                 session.commit()
+        self.log_event(_STAGE_MESSAGES.get(stage, f"Stage: {stage}"), stage=stage)
 
     def begin_structuring(self, segments_total: int) -> None:
         if not self.job_id:
@@ -75,6 +123,7 @@ class JobTracker:
                 job.step_count = step_count
                 job.completed_at = datetime.now(timezone.utc)
                 session.commit()
+        self.log_event(f"Completed — {step_count} step(s) indexed")
 
     def fail(self, error: str) -> None:
         if not self.job_id:
@@ -88,6 +137,21 @@ class JobTracker:
                 job.error = error
                 job.completed_at = datetime.now(timezone.utc)
                 session.commit()
+        self.log_event(error, level="error")
+
+    def mark_cancelled(self) -> None:
+        """Finalise a cancelled job (called once the worker unwinds)."""
+        if not self.job_id:
+            return
+        with get_db_session() as session:
+            job = session.get(JobDB, self.job_id)
+            if job:
+                job.status = "cancelled"
+                job.stage = None
+                if job.completed_at is None:
+                    job.completed_at = datetime.now(timezone.utc)
+                session.commit()
+        self.log_event("Job cancelled", level="warning")
 
 
 def structure_segments(
@@ -194,9 +258,14 @@ def run_ingestion_pipeline(
             steps=steps,
             meta=meta,
         )
+        tracker.raise_if_cancelled()
         index_tutorial_result(tutorial)
         tracker.complete(tutorial.id, len(steps))
         return tutorial
+    except JobCancelled:
+        # Let the calling task finalise cancellation; don't mark as failed.
+        raise
     except Exception as exc:
-        tracker.fail(str(exc))
+        from stepwise.ingestion.errors import humanize_error
+        tracker.fail(humanize_error(exc))
         raise

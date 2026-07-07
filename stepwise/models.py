@@ -87,20 +87,39 @@ class JobDB(Base):
     library_id = Column(
         String, ForeignKey("libraries.id"), default=DEFAULT_LIBRARY_ID, index=True
     )
-    status = Column(String, default="pending")  # pending | running | done | error
+    status = Column(String, default="pending")  # pending | running | done | error | cancelled
     stage = Column(String, nullable=True)        # downloading | aligning | structuring | indexing
     segments_done = Column(Integer, nullable=True)
     segments_total = Column(Integer, nullable=True)
     tutorial_id = Column(String, nullable=True)
     step_count = Column(Integer, nullable=True)
     error = Column(Text, nullable=True)
+    # Source metadata — lets the detail view describe the job and lets retry
+    # re-dispatch a job whose inputs are re-fetchable (currently YouTube only).
+    source_type = Column(String, nullable=True)  # youtube | drive | notion | images
+    source_url = Column(String, nullable=True)
+    title = Column(String, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
         DateTime,
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
-    completed_at = Column(DateTime, nullable=True)  # set when status reaches done | error
+    started_at = Column(DateTime, nullable=True)    # set when the job starts running
+    # set when status reaches done | error | cancelled
+    completed_at = Column(DateTime, nullable=True)
+
+
+class JobEventDB(Base):
+    """Append-only log of notable events during an ingestion job."""
+    __tablename__ = "job_events"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    job_id = Column(String, ForeignKey("jobs.id"), nullable=False, index=True)
+    stage = Column(String, nullable=True)
+    level = Column(String, nullable=False, default="info")  # info | warning | error
+    message = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class FeedbackDB(Base):
@@ -233,4 +252,25 @@ def get_engine(db_path: Path):
     engine = create_engine(f"sqlite:///{db_path}")
     Base.metadata.create_all(engine)
     _migrate_libraries(engine)
+    _migrate_jobs_columns(engine)
     return engine
+
+
+def _migrate_jobs_columns(engine) -> None:
+    """Additively add columns introduced after the initial `jobs` schema.
+
+    SQLite's `create_all` creates missing tables but never alters existing ones,
+    so a database created before these columns existed needs a lightweight,
+    idempotent ALTER. New tables (e.g. job_events) are handled by create_all.
+    """
+    new_columns = {
+        "source_type": "VARCHAR",
+        "source_url": "VARCHAR",
+        "title": "VARCHAR",
+        "started_at": "DATETIME",
+    }
+    with engine.begin() as conn:
+        existing = {row[1] for row in conn.exec_driver_sql("PRAGMA table_info(jobs)")}
+        for name, ddl in new_columns.items():
+            if name not in existing:
+                conn.exec_driver_sql(f"ALTER TABLE jobs ADD COLUMN {name} {ddl}")
