@@ -10,7 +10,7 @@ from stepwise.alignment import align_segments
 from stepwise.indexing import index_tutorial
 from stepwise.indexing.dedup import check_tutorial_overlap
 from stepwise.indexing.indexer import get_db_session
-from stepwise.models import JobDB, Segment, Step, Tutorial
+from stepwise.models import DEFAULT_LIBRARY_ID, JobDB, Segment, Step, Tutorial
 from stepwise.structuring import structure_segment
 from stepwise.structuring.consolidator import consolidate_steps
 from stepwise.structuring.deduplicator import deduplicate_steps
@@ -152,7 +152,7 @@ def image_consolidation_target(steps: list[Step], frame_count: int) -> int | Non
 def index_tutorial_result(tutorial: Tutorial) -> None:
     log.info("Indexing tutorial %s (%d steps)", tutorial.id, len(tutorial.steps))
     index_tutorial(tutorial)
-    check_tutorial_overlap(tutorial.id)
+    check_tutorial_overlap(tutorial.id, tutorial.library_id)
 
 
 def run_ingestion_pipeline(
@@ -164,6 +164,7 @@ def run_ingestion_pipeline(
     transcript: list[dict],
     frames: list[dict],
     tutorial_id: str,
+    library_id: str = DEFAULT_LIBRARY_ID,
     job_id: str | None = None,
     segments: list[Segment] | None = None,
     consolidation_target_fn: Callable[[list[Step]], int | None] | None = None,
@@ -186,6 +187,7 @@ def run_ingestion_pipeline(
         tracker.set_stage("indexing")
         tutorial = Tutorial(
             id=tutorial_id,
+            library_id=library_id,
             source_url=source_url,
             title=title,
             source_type=source_type,

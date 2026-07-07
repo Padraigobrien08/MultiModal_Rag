@@ -43,6 +43,7 @@ class TestQuerySync:
 
         mock.assert_called_once_with(
             "undo that",
+            library_id="local",
             tutorial_id="tut-123",
             top_k=7,
             history=[{"role": "user", "text": "how do I invite?"}],

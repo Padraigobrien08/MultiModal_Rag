@@ -68,6 +68,10 @@ def main():
     parser.add_argument(
         "--sequential", action="store_true", help="Submit one at a time (avoids rate limits)"
     )
+    parser.add_argument(
+        "--library", default="local",
+        help="Library/workspace id to ingest into (default: local)",
+    )
     args = parser.parse_args()
 
     corpus_path = BASE_DIR / "stripe_corpus.json"
@@ -76,6 +80,7 @@ def main():
 
     print("Stepwise corpus ingestion")
     print(f"API: {args.api}")
+    print(f"Library: {args.library}")
     print(f"Videos: {len(videos)}")
     print("=" * 50)
 
@@ -91,7 +96,7 @@ def main():
 
         print(f"  [{i:2d}/{len(videos)}] {topic}: {label[:55]}")
         try:
-            resp = post_json(f"{args.api}/ingest", {"url": url})
+            resp = post_json(f"{args.api}/ingest", {"url": url, "library_id": args.library})
         except urllib.error.HTTPError as e:
             body = e.read().decode()
             print(f"         ✗ HTTP {e.code}: {body[:80]}")

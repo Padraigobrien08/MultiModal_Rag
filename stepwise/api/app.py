@@ -23,8 +23,17 @@ from stepwise.ingestion.tasks import (
     run_youtube_ingestion,
 )
 from stepwise.logging_config import setup_logging
-from stepwise.models import FeedbackDB, JobDB, TutorialDB, WatcherDB, WatcherSourceType
+from stepwise.models import (
+    FeedbackDB,
+    JobDB,
+    LibraryDB,
+    TutorialDB,
+    WatcherDB,
+    WatcherSourceType,
+)
 from stepwise.retrieval import query_steps, query_steps_stream
+
+DEFAULT_LIBRARY_ID = settings.default_library_id
 
 # Public-input bounds
 MAX_QUERY_LEN = 2000
@@ -51,6 +60,9 @@ async def lifespan(app: FastAPI):
             "completed_at": now,
         })
         session.commit()
+    # One-time backfill: tag pre-scoping Chroma vectors into the default library.
+    from stepwise.indexing.indexer import migrate_chroma_default_library
+    migrate_chroma_default_library()
     if settings.watcher_poll_enabled:
         from stepwise.ingestion import scheduler
         scheduler.start(settings.watcher_poll_interval_minutes, _poll_all_active)
@@ -99,6 +111,7 @@ app.add_middleware(RequestIDMiddleware)
 class IngestRequest(BaseModel):
     url: str = Field(min_length=1, max_length=MAX_URL_LEN)
     title: Optional[str] = Field(default=None, max_length=MAX_TITLE_LEN)
+    library_id: str = Field(default=DEFAULT_LIBRARY_ID, max_length=MAX_ID_LEN)
 
 
 class DriveIngestRequest(BaseModel):
@@ -107,10 +120,12 @@ class DriveIngestRequest(BaseModel):
     video_id: str = Field(min_length=1, max_length=MAX_ID_LEN)
     transcript: list[dict]   # [{text, start, duration}]
     frames: list[dict]       # [{path, timestamp}]
+    library_id: str = Field(default=DEFAULT_LIBRARY_ID, max_length=MAX_ID_LEN)
 
 
 class QueryRequest(BaseModel):
     query: str = Field(min_length=1, max_length=MAX_QUERY_LEN)
+    library_id: str = Field(default=DEFAULT_LIBRARY_ID, max_length=MAX_ID_LEN)
     tutorial_id: Optional[str] = Field(default=None, max_length=MAX_ID_LEN)
     top_k: int = Field(default=5, ge=1, le=50)
     # [{role, text}] — last N exchanges for multi-turn context
@@ -121,12 +136,14 @@ class FeedbackRequest(BaseModel):
     query: str = Field(min_length=1, max_length=MAX_QUERY_LEN)
     step_id: str = Field(min_length=1, max_length=MAX_ID_LEN)
     helpful: bool
+    library_id: str = Field(default=DEFAULT_LIBRARY_ID, max_length=MAX_ID_LEN)
 
 
 class NotionIngestRequest(BaseModel):
     page_id: str = Field(min_length=1, max_length=MAX_ID_LEN)
     notion_token: str = Field(min_length=1, max_length=MAX_ID_LEN)
     title: Optional[str] = Field(default=None, max_length=MAX_TITLE_LEN)
+    library_id: str = Field(default=DEFAULT_LIBRARY_ID, max_length=MAX_ID_LEN)
 
 
 class WatcherCreateRequest(BaseModel):
@@ -134,26 +151,64 @@ class WatcherCreateRequest(BaseModel):
     source_id: str = Field(min_length=1, max_length=MAX_ID_LEN)
     label: Optional[str] = Field(default=None, max_length=MAX_ID_LEN)
     config: dict = Field(default_factory=dict)  # token_path, notion_token, recursive, etc.
+    library_id: str = Field(default=DEFAULT_LIBRARY_ID, max_length=MAX_ID_LEN)
+
+
+class LibraryCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=MAX_TITLE_LEN)
+
+
+@app.post("/libraries", status_code=201)
+def create_library(req: LibraryCreateRequest) -> dict:
+    library_id = str(uuid.uuid4())
+    with get_db_session() as session:
+        session.add(LibraryDB(id=library_id, name=req.name))
+        session.commit()
+    return {"id": library_id, "name": req.name}
+
+
+@app.get("/libraries")
+def list_libraries() -> list:
+    with get_db_session() as session:
+        libs = session.query(LibraryDB).order_by(LibraryDB.created_at).all()
+        return [
+            {
+                "id": lib.id,
+                "name": lib.name,
+                "created_at": lib.created_at.isoformat() if lib.created_at else None,
+            }
+            for lib in libs
+        ]
 
 
 @app.post("/ingest", status_code=202)
 def ingest(req: IngestRequest, background_tasks: BackgroundTasks) -> dict:
     canonical = _canonical_url(req.url)
     with get_db_session() as session:
-        existing = session.query(TutorialDB).filter_by(source_url=canonical).first()
+        existing = (
+            session.query(TutorialDB)
+            .filter_by(source_url=canonical, library_id=req.library_id)
+            .first()
+        )
         if existing:
             return {"tutorial_id": existing.id, "step_count": len(existing.steps), "existing": True}
         # Also check against the raw URL in case it was previously stored unnormalised
-        existing = session.query(TutorialDB).filter_by(source_url=req.url).first()
+        existing = (
+            session.query(TutorialDB)
+            .filter_by(source_url=req.url, library_id=req.library_id)
+            .first()
+        )
         if existing:
             return {"tutorial_id": existing.id, "step_count": len(existing.steps), "existing": True}
 
     job_id = str(uuid.uuid4())
     with get_db_session() as session:
-        session.add(JobDB(id=job_id, status="pending"))
+        session.add(JobDB(id=job_id, status="pending", library_id=req.library_id))
         session.commit()
 
-    background_tasks.add_task(run_youtube_ingestion, job_id, req.url, req.title)
+    background_tasks.add_task(
+        run_youtube_ingestion, job_id, req.url, req.title, library_id=req.library_id
+    )
     return {"job_id": job_id}
 
 
@@ -208,9 +263,14 @@ def get_tutorial(tutorial_id: str) -> dict:
 
 
 @app.get("/tutorials")
-def list_tutorials() -> list:
+def list_tutorials(library_id: str = Query(default=DEFAULT_LIBRARY_ID)) -> list:
     with get_db_session() as session:
-        tutorials = session.query(TutorialDB).order_by(TutorialDB.id).all()
+        tutorials = (
+            session.query(TutorialDB)
+            .filter_by(library_id=library_id)
+            .order_by(TutorialDB.id)
+            .all()
+        )
         return [
             {
                 "id": t.id,
@@ -260,15 +320,18 @@ def reingest_tutorial(tutorial_id: str, background_tasks: BackgroundTasks) -> di
             raise HTTPException(status_code=404, detail="Tutorial not found")
         url = t.source_url
         title = t.title
+        library_id = t.library_id or DEFAULT_LIBRARY_ID
 
     _delete_tutorial_data(tutorial_id)
 
     job_id = str(uuid.uuid4())
     with get_db_session() as session:
-        session.add(JobDB(id=job_id, status="pending"))
+        session.add(JobDB(id=job_id, status="pending", library_id=library_id))
         session.commit()
 
-    background_tasks.add_task(run_youtube_ingestion, job_id, url, title)
+    background_tasks.add_task(
+        run_youtube_ingestion, job_id, url, title, library_id=library_id
+    )
     return {"job_id": job_id}
 
 
@@ -276,6 +339,7 @@ def reingest_tutorial(tutorial_id: str, background_tasks: BackgroundTasks) -> di
 async def ingest_images_endpoint(
     background_tasks: BackgroundTasks,
     title: str = Form(..., min_length=1, max_length=MAX_TITLE_LEN),
+    library_id: str = Form(default=DEFAULT_LIBRARY_ID, max_length=MAX_ID_LEN),
     files: list[UploadFile] = File(...),
 ) -> dict:
     if not files:
@@ -305,10 +369,12 @@ async def ingest_images_endpoint(
 
     job_id = str(uuid.uuid4())
     with get_db_session() as session:
-        session.add(JobDB(id=job_id, status="pending"))
+        session.add(JobDB(id=job_id, status="pending", library_id=library_id))
         session.commit()
 
-    background_tasks.add_task(run_image_ingestion, job_id, file_data, title)
+    background_tasks.add_task(
+        run_image_ingestion, job_id, file_data, title, library_id=library_id
+    )
     return {"job_id": job_id}
 
 
@@ -317,17 +383,22 @@ def ingest_notion_endpoint(req: NotionIngestRequest, background_tasks: Backgroun
     # Idempotency: canonical Notion URL
     notion_url = f"https://www.notion.so/{req.page_id.replace('-', '')}"
     with get_db_session() as session:
-        existing = session.query(TutorialDB).filter_by(source_url=notion_url).first()
+        existing = (
+            session.query(TutorialDB)
+            .filter_by(source_url=notion_url, library_id=req.library_id)
+            .first()
+        )
         if existing:
             return {"tutorial_id": existing.id, "step_count": len(existing.steps), "existing": True}
 
     job_id = str(uuid.uuid4())
     with get_db_session() as session:
-        session.add(JobDB(id=job_id, status="pending"))
+        session.add(JobDB(id=job_id, status="pending", library_id=req.library_id))
         session.commit()
 
     background_tasks.add_task(
-        run_notion_ingestion_api, job_id, req.page_id, req.title, req.notion_token
+        run_notion_ingestion_api, job_id, req.page_id, req.title, req.notion_token,
+        library_id=req.library_id,
     )
     return {"job_id": job_id}
 
@@ -336,16 +407,22 @@ def ingest_notion_endpoint(req: NotionIngestRequest, background_tasks: Backgroun
 def ingest_drive_endpoint(req: DriveIngestRequest, background_tasks: BackgroundTasks) -> dict:
     # Idempotency check
     with get_db_session() as session:
-        existing = session.query(TutorialDB).filter_by(source_url=req.source_url).first()
+        existing = (
+            session.query(TutorialDB)
+            .filter_by(source_url=req.source_url, library_id=req.library_id)
+            .first()
+        )
         if existing:
             return {"tutorial_id": existing.id, "step_count": len(existing.steps), "existing": True}
 
     job_id = str(uuid.uuid4())
     with get_db_session() as session:
-        session.add(JobDB(id=job_id, status="pending"))
+        session.add(JobDB(id=job_id, status="pending", library_id=req.library_id))
         session.commit()
 
-    background_tasks.add_task(run_drive_ingestion, job_id, req.model_dump())
+    background_tasks.add_task(
+        run_drive_ingestion, job_id, req.model_dump(), library_id=req.library_id
+    )
     return {"job_id": job_id}
 
 
@@ -353,10 +430,15 @@ def ingest_drive_endpoint(req: DriveIngestRequest, background_tasks: BackgroundT
 def list_jobs(
     status: Optional[str] = None,
     limit: int = Query(default=20, ge=1, le=200),
+    library_id: str = Query(default=DEFAULT_LIBRARY_ID),
 ) -> list:
     """Return recent jobs, optionally filtered by status (comma-separated)."""
     with get_db_session() as session:
-        q = session.query(JobDB).order_by(JobDB.created_at.desc())
+        q = (
+            session.query(JobDB)
+            .filter(JobDB.library_id == library_id)
+            .order_by(JobDB.created_at.desc())
+        )
         if status:
             statuses = status.split(",")
             q = q.filter(JobDB.status.in_(statuses))
@@ -385,6 +467,7 @@ def create_watcher(req: WatcherCreateRequest) -> dict:
     with get_db_session() as session:
         session.add(WatcherDB(
             id=watcher_id,
+            library_id=req.library_id,
             source_type=req.source_type.value,
             source_id=req.source_id,
             label=req.label or req.source_id,
@@ -395,9 +478,14 @@ def create_watcher(req: WatcherCreateRequest) -> dict:
 
 
 @app.get("/watchers")
-def list_watchers() -> list:
+def list_watchers(library_id: str = Query(default=DEFAULT_LIBRARY_ID)) -> list:
     with get_db_session() as session:
-        watchers = session.query(WatcherDB).order_by(WatcherDB.created_at.desc()).all()
+        watchers = (
+            session.query(WatcherDB)
+            .filter(WatcherDB.library_id == library_id)
+            .order_by(WatcherDB.created_at.desc())
+            .all()
+        )
         return [
             {
                 "id": w.id,
@@ -475,7 +563,8 @@ def poll_watcher_endpoint(watcher_id: str, background_tasks: BackgroundTasks) ->
 def query(req: QueryRequest) -> StreamingResponse:
     return StreamingResponse(
         query_steps_stream(
-            req.query, tutorial_id=req.tutorial_id, top_k=req.top_k, history=req.history
+            req.query, library_id=req.library_id, tutorial_id=req.tutorial_id,
+            top_k=req.top_k, history=req.history,
         ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
@@ -485,7 +574,10 @@ def query(req: QueryRequest) -> StreamingResponse:
 @app.post("/query/sync")
 def query_sync(req: QueryRequest) -> dict:
     """Non-streaming query — returns JSON {answer, steps}. Used by eval, Zendesk, and tests."""
-    return query_steps(req.query, tutorial_id=req.tutorial_id, top_k=req.top_k, history=req.history)
+    return query_steps(
+        req.query, library_id=req.library_id, tutorial_id=req.tutorial_id,
+        top_k=req.top_k, history=req.history,
+    )
 
 
 @app.post("/feedback", status_code=201)
@@ -493,6 +585,7 @@ def submit_feedback(req: FeedbackRequest) -> dict:
     with get_db_session() as session:
         session.add(FeedbackDB(
             id=str(uuid.uuid4()),
+            library_id=req.library_id,
             query=req.query,
             step_id=req.step_id,
             helpful=1 if req.helpful else -1,
@@ -525,6 +618,7 @@ def _run_reindex() -> None:
         tutorials = session.query(TutorialDB).all()
         tutorial_data = [
             (t.id, t.title, t.source_url, t.source_type, t.meta,
+             t.library_id or DEFAULT_LIBRARY_ID,
              [(s.id, s.title, s.description, s.visual_reference,
                s.timestamp_start, s.step_number) for s in t.steps])
             for t in tutorials
@@ -536,7 +630,7 @@ def _run_reindex() -> None:
     text_model = get_text_encoder()
     clip_model = get_clip_encoder()
 
-    for tid, title, source_url, source_type, meta, steps in tutorial_data:
+    for tid, title, source_url, source_type, meta, library_id, steps in tutorial_data:
         if not steps:
             continue
         log.info("Re-indexing %s (%d steps)", title, len(steps))
@@ -556,8 +650,9 @@ def _run_reindex() -> None:
             embeddings=fused,
             documents=texts,
             metadatas=[
-                {"tutorial_id": tid, "step_number": s[5], "step_id": s[0],
-                 "timestamp_start": s[4] or 0, "visual_reference": s[3] or ""}
+                {"library_id": library_id, "tutorial_id": tid, "step_number": s[5],
+                 "step_id": s[0], "timestamp_start": s[4] or 0,
+                 "visual_reference": s[3] or ""}
                 for s in steps
             ],
         )
@@ -569,7 +664,7 @@ def _run_reindex() -> None:
             ids=[tid],
             embeddings=[centroid.tolist()],
             documents=[title or ""],
-            metadatas=[{"tutorial_id": tid}],
+            metadatas=[{"library_id": library_id, "tutorial_id": tid}],
         )
 
     log.info("Reindex complete — %d tutorials", len(tutorial_data))
@@ -579,12 +674,17 @@ def _run_reindex() -> None:
 def get_query_logs(
     limit: int = Query(default=500, ge=1, le=2000),
     since: Optional[str] = None,
+    library_id: str = Query(default=DEFAULT_LIBRARY_ID),
 ) -> list:
     from datetime import timedelta
 
     from stepwise.models import QueryLogDB
     with get_db_session() as session:
-        q = session.query(QueryLogDB).order_by(QueryLogDB.created_at.desc())
+        q = (
+            session.query(QueryLogDB)
+            .filter(QueryLogDB.library_id == library_id)
+            .order_by(QueryLogDB.created_at.desc())
+        )
         if since:
             delta = {
                 "24h": timedelta(hours=24),
@@ -629,27 +729,35 @@ def get_query_logs(
 
 
 @app.get("/admin/stats")
-def get_admin_stats() -> dict:
+def get_admin_stats(library_id: str = Query(default=DEFAULT_LIBRARY_ID)) -> dict:
     from datetime import timedelta
 
     from stepwise.models import QueryLogDB
     with get_db_session() as session:
         cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
-        queries_24h = session.query(QueryLogDB).filter(QueryLogDB.created_at >= cutoff).count()
-        queries_total = session.query(QueryLogDB).count()
+        base = session.query(QueryLogDB).filter(QueryLogDB.library_id == library_id)
+        queries_24h = base.filter(QueryLogDB.created_at >= cutoff).count()
+        queries_total = (
+            session.query(QueryLogDB)
+            .filter(QueryLogDB.library_id == library_id)
+            .count()
+        )
         return {"queries_24h": queries_24h, "queries_total": queries_total}
 
 
 @app.get("/gaps")
-def get_gaps(force: bool = False) -> list:
+def get_gaps(
+    force: bool = False,
+    library_id: str = Query(default=DEFAULT_LIBRARY_ID),
+) -> list:
     """
-    Analyse recent query logs for topics with poor coverage.
+    Analyse recent query logs for topics with poor coverage within a library.
 
-    Results are cached for 1 hour. Pass ?force=true to recompute immediately.
-    Returns a list of gap objects sorted by query_count descending.
+    Results are cached per library for 1 hour. Pass ?force=true to recompute
+    immediately. Returns a list of gap objects sorted by query_count descending.
     """
     from stepwise.analysis.gap_detector import detect_gaps
-    return detect_gaps(force=force)
+    return detect_gaps(force=force, library_id=library_id)
 
 
 @app.get("/health")

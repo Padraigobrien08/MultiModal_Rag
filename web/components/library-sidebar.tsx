@@ -21,21 +21,24 @@ type ActiveJob = {
 
 type Props = {
   onClose: () => void;
+  libraryId: string;
   scopedId: string | null;
   onScopeTutorial: (t: { id: string; title: string } | null) => void;
   refreshKey?: number;
 };
 
-export function LibrarySidebar({ onClose, scopedId, onScopeTutorial, refreshKey }: Props) {
+export function LibrarySidebar({ onClose, libraryId, scopedId, onScopeTutorial, refreshKey }: Props) {
   const [tutorials, setTutorials] = useState<Tutorial[]>([]);
   const [jobs, setJobs] = useState<ActiveJob[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const jobsUrl = `/api/jobs?status=pending,running&library_id=${encodeURIComponent(libraryId)}`;
+
   async function fetchAll() {
     try {
       const [tRes, jRes] = await Promise.all([
-        fetch("/api/tutorials", { cache: "no-store" }),
-        fetch("/api/jobs?status=pending,running", { cache: "no-store" }),
+        fetch(`/api/tutorials?library_id=${encodeURIComponent(libraryId)}`, { cache: "no-store" }),
+        fetch(jobsUrl, { cache: "no-store" }),
       ]);
       if (tRes.ok) setTutorials(await tRes.json());
       if (jRes.ok) setJobs(await jRes.json());
@@ -43,12 +46,15 @@ export function LibrarySidebar({ onClose, scopedId, onScopeTutorial, refreshKey 
     setLoading(false);
   }
 
-  useEffect(() => { void Promise.resolve().then(() => fetchAll()); }, [refreshKey]);
+  useEffect(() => {
+    void Promise.resolve().then(() => { setLoading(true); return fetchAll(); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey, libraryId]);
 
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const res = await fetch("/api/jobs?status=pending,running", { cache: "no-store" });
+        const res = await fetch(jobsUrl, { cache: "no-store" });
         if (res.ok) {
           const next = await res.json();
           // If jobs just finished, refresh tutorials too
@@ -59,7 +65,7 @@ export function LibrarySidebar({ onClose, scopedId, onScopeTutorial, refreshKey 
     }, 4000);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [libraryId]);
 
   return (
     <div className="flex flex-col h-full bg-background border-l border-border/60">

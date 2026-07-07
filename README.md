@@ -231,6 +231,7 @@ stepwise query "how do I configure an API key?"
 | `POST` | `/query` | Ask a question — streamed SSE answer + steps |
 | `POST` | `/query/sync` | Same as `/query` but returns JSON `{answer, steps}` (eval, Zendesk) |
 | `GET` | `/tutorials` · `/tutorials/{id}` | Browse the library |
+| `GET` `POST` | `/libraries` | List / create libraries (workspaces) |
 | `POST` | `/watchers` · `POST /watchers/poll` | Manage & poll auto-ingestion sources |
 | `GET` | `/gaps?force=true` | Detect coverage gaps from query logs |
 | `GET` | `/admin/query-logs` · `/admin/stats` | Retrieval telemetry |
@@ -240,7 +241,39 @@ stepwise query "how do I configure an API key?"
 
 Full interactive schema at **`/docs`** when the API is running.
 
+Every ingest / query / watcher / gaps / admin / tutorial endpoint accepts a `library_id` (POST body field or `?library_id=` query param). It defaults to the built-in `local` library, so single-library setups need no changes. See **[Libraries (workspaces)](#libraries-workspaces)**.
+
 `/health` and `/ready` are the probe endpoints for an orchestrator (Docker healthcheck, Kubernetes liveness/readiness, Railway). Both are exempt from `API_KEY` auth. Use `/health` for liveness (does the process respond) and `/ready` for readiness (can it actually serve traffic) — `/ready` returns a per-check breakdown, e.g. `{"status":"ready","checks":{"db":"ok","chroma":"ok"}}`.
+
+---
+
+## Libraries (workspaces)
+
+A **library** (called a *workspace* in the UI) is an isolation boundary for a corpus. Steps in one library are never retrieved by a query scoped to another — so a Stripe corpus, a Claude corpus, a demo corpus, and a user's own uploads don't pollute each other's answers.
+
+**Local single-library mode (default).** Do nothing and everything lands in the built-in `local` library: tutorials, steps, jobs, watchers, query logs, and feedback all belong to it, and queries search it. This is the zero-config path and behaves exactly as before.
+
+**Multi-library scoping.** Create additional libraries and tag reads/writes with a `library_id`:
+
+```bash
+# Create a library
+curl -sX POST localhost:8000/libraries -H 'content-type: application/json' \
+  -d '{"name":"Stripe"}'          # → {"id":"<uuid>","name":"Stripe"}
+
+# Ingest into it, then query only it
+curl -sX POST localhost:8000/ingest -H 'content-type: application/json' \
+  -d '{"url":"https://youtu.be/...","library_id":"<uuid>"}'
+curl -sX POST localhost:8000/query/sync -H 'content-type: application/json' \
+  -d '{"query":"how do I issue a refund?","library_id":"<uuid>"}'
+
+# Build a whole corpus into a named library
+python scripts/ingest_corpus.py --library <uuid>
+```
+
+- **Model.** A `libraries` row (`id`, `name`, `created_at`); every tutorial / step / job / watcher / query-log / feedback row carries a `library_id`. Chroma step and tutorial-centroid metadata include `library_id`, and retrieval (both the tutorial pre-filter and the step search) is confined to it.
+- **Web UI.** A **Workspace** selector in the header switches the active library; the Library panel, ingestion, and queries all follow it. The choice is remembered in the browser.
+- **Upgrading an existing install.** The SQLite schema auto-migrates on startup (adds `library_id`, backfilling existing rows into `local`), and a one-time, metadata-only pass tags pre-existing Chroma vectors into `local` — no re-embedding, nothing to run by hand.
+- **Out of scope (for now).** Auth / per-library access control, deleting or renaming libraries, and moving tutorials between libraries.
 
 ---
 

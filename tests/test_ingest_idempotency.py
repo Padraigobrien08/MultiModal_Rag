@@ -64,7 +64,8 @@ class TestIngestIdempotency:
 
         assert resp.json()["existing"] is True
         session.query.return_value.filter_by.assert_called_with(
-            source_url="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+            source_url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            library_id="local",
         )
 
     def test_new_url_queues_background_job(self, app_client):

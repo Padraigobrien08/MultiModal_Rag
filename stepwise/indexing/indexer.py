@@ -65,6 +65,36 @@ def _fuse_embeddings(text_emb: np.ndarray, image_emb: np.ndarray | None) -> np.n
     return fused / np.linalg.norm(fused)
 
 
+def migrate_chroma_default_library() -> None:
+    """Tag pre-existing Chroma vectors (indexed before library scoping) into the
+    default library. Metadata-only update — no re-embedding. Idempotent and
+    best-effort: safe to call on every startup and a no-op once everything is
+    tagged (or when Chroma is empty / mocked in tests).
+    """
+    import logging
+    log = logging.getLogger(__name__)
+    default_id = settings.default_library_id
+    try:
+        chroma = _get_chroma()
+        for name in ("steps", "tutorial_centroids"):
+            col = chroma.get_or_create_collection(name)
+            result = col.get(include=["metadatas"])
+            ids = result.get("ids") or []
+            metas = result.get("metadatas") or []
+            fix_ids, fix_metas = [], []
+            for cid, meta in zip(ids, metas):
+                meta = meta or {}
+                if not meta.get("library_id"):
+                    fix_ids.append(cid)
+                    fix_metas.append({**meta, "library_id": default_id})
+            if fix_ids:
+                col.update(ids=fix_ids, metadatas=fix_metas)
+                log.info("Tagged %d %s vectors into library '%s'",
+                         len(fix_ids), name, default_id)
+    except Exception:
+        log.warning("Chroma library backfill skipped", exc_info=True)
+
+
 def index_tutorial(tutorial: Tutorial) -> None:
     """Persist tutorial + steps to SQLite and embed steps into ChromaDB."""
     _index_relational(tutorial)
@@ -75,6 +105,7 @@ def _index_relational(tutorial: Tutorial) -> None:
     with get_db_session() as session:
         session.merge(TutorialDB(
             id=tutorial.id,
+            library_id=tutorial.library_id,
             source_url=tutorial.source_url,
             title=tutorial.title,
             source_type=tutorial.source_type,
@@ -84,6 +115,7 @@ def _index_relational(tutorial: Tutorial) -> None:
         for step in tutorial.steps:
             session.merge(StepDB(
                 id=step.id,
+                library_id=tutorial.library_id,
                 tutorial_id=step.tutorial_id,
                 step_number=step.step_number,
                 title=step.title,
@@ -124,6 +156,7 @@ def _index_vectors(tutorial: Tutorial) -> None:
         documents=texts,
         metadatas=[
             {
+                "library_id": tutorial.library_id,
                 "tutorial_id": s.tutorial_id,
                 "step_number": s.step_number,
                 "step_id": s.id,
@@ -143,5 +176,5 @@ def _index_vectors(tutorial: Tutorial) -> None:
         ids=[tutorial.id],
         embeddings=[centroid.tolist()],
         documents=[tutorial.title or ""],
-        metadatas=[{"tutorial_id": tutorial.id}],
+        metadatas=[{"library_id": tutorial.library_id, "tutorial_id": tutorial.id}],
     )

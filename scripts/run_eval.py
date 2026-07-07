@@ -111,7 +111,12 @@ class InProcessRunner:
 
     def run(self, query: str, top_k: int) -> dict:
         docs, metas, distances, timing = self._retriever._chromadb_lookup(
-            query, None, top_k, [], allowed_tutorial_ids=self._allowed
+            query,
+            self._retriever.settings.default_library_id,
+            None,
+            top_k,
+            [],
+            allowed_tutorial_ids=self._allowed,
         )
         ce = timing.get("ce_scores", {})
         steps = [

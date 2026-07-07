@@ -64,6 +64,6 @@ class TestChromadbLookupNoClip:
             patch("stepwise.retrieval.retriever._get_chroma", return_value=mock_chroma),
             patch("stepwise.indexing.indexer._get_clip_model") as mock_clip,
         ):
-            _chromadb_lookup("how do I refund?", None, 5, [])
+            _chromadb_lookup("how do I refund?", "local", None, 5, [])
 
         mock_clip.assert_not_called()

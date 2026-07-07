@@ -7,6 +7,10 @@ import { cn } from "@/lib/utils";
 import { HistorySidebar, type ConvSummary } from "@/components/history-sidebar";
 import { LibrarySidebar } from "@/components/library-sidebar";
 import { IngestModal } from "@/components/ingest-modal";
+import { WorkspaceSelector } from "@/components/workspace-selector";
+
+const LIBRARY_KEY = "stepwise:libraryId";
+const DEFAULT_LIBRARY_ID = "local";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -136,7 +140,7 @@ function ResizeHandle({ isOpen, onToggle, onResize }: {
 
 // ── Step card ─────────────────────────────────────────────────────────────────
 
-function StepCard({ step, index, query }: { step: StepResult; index: number; query?: string }) {
+function StepCard({ step, index, query, libraryId }: { step: StepResult; index: number; query?: string; libraryId: string }) {
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
   const url = videoUrl(step);
   const ts = step.timestamp_start !== null ? fmtTime(step.timestamp_start) : null;
@@ -147,7 +151,7 @@ function StepCard({ step, index, query }: { step: StepResult; index: number; que
     await fetch("/api/feedback", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: query ?? "", step_id: step.step_id, helpful }),
+      body: JSON.stringify({ query: query ?? "", step_id: step.step_id, helpful, library_id: libraryId }),
     }).catch(() => {});
   }
 
@@ -198,7 +202,7 @@ function StepCard({ step, index, query }: { step: StepResult; index: number; que
 
 // ── Assistant message ─────────────────────────────────────────────────────────
 
-function AssistantMessage({ msg, query }: { msg: Message; query?: string }) {
+function AssistantMessage({ msg, query, libraryId }: { msg: Message; query?: string; libraryId: string }) {
   if (msg.loading) return (
     <div className="flex items-center gap-2 py-2">
       <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
@@ -226,7 +230,7 @@ function AssistantMessage({ msg, query }: { msg: Message; query?: string }) {
           )}
         </p>
       )}
-      {steps.map((step, i) => <StepCard key={step.step_id} step={step} index={i} query={query} />)}
+      {steps.map((step, i) => <StepCard key={step.step_id} step={step} index={i} query={query} libraryId={libraryId} />)}
     </div>
   );
 }
@@ -285,6 +289,7 @@ export default function Page() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [scoped, setScoped] = useState<{ id: string; title: string } | null>(null);
+  const [libraryId, setLibraryId] = useState(DEFAULT_LIBRARY_ID);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -292,6 +297,21 @@ export default function Page() {
   const messagesRef = useRef<Message[]>([]);
 
   useEffect(() => { setHistory(loadHistory()); }, []);
+
+  // Restore the last-active workspace.
+  useEffect(() => {
+    const saved = localStorage.getItem(LIBRARY_KEY);
+    if (saved) setLibraryId(saved);
+  }, []);
+
+  // Switching workspace: persist it, drop any tutorial scope (tutorials belong
+  // to a library), and refresh the library panel.
+  function changeLibrary(id: string) {
+    setLibraryId(id);
+    localStorage.setItem(LIBRARY_KEY, id);
+    setScoped(null);
+    setLibraryRefreshKey(k => k + 1);
+  }
 
   // Auto-scope when arriving from the tutorials page via /?tutorial_id=...
   useEffect(() => {
@@ -353,7 +373,7 @@ export default function Page() {
       const res = await fetch("/api/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: q, tutorial_id: scoped?.id, top_k: 5, history: historyMsgs }),
+        body: JSON.stringify({ query: q, library_id: libraryId, tutorial_id: scoped?.id, top_k: 5, history: historyMsgs }),
       });
       if (!res.ok) throw new Error("Query failed");
 
@@ -430,6 +450,8 @@ export default function Page() {
         </div>
 
         <div className="flex-1" />
+
+        <WorkspaceSelector libraryId={libraryId} onSelect={changeLibrary} />
 
         {scoped && (
           <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-xs text-primary max-w-[180px]">
@@ -543,7 +565,7 @@ export default function Page() {
                             <path d="M2 3h10M2 7h7M2 11h4" stroke="#00ff88" strokeWidth="1.5" strokeLinecap="round" />
                           </svg>
                         </div>
-                        <div className="flex-1 min-w-0 pt-0.5"><AssistantMessage msg={msg} query={messages[idx - 1]?.text} /></div>
+                        <div className="flex-1 min-w-0 pt-0.5"><AssistantMessage msg={msg} query={messages[idx - 1]?.text} libraryId={libraryId} /></div>
                       </div>
                     )}
                   </div>
@@ -585,13 +607,13 @@ export default function Page() {
           className="flex-shrink-0 overflow-hidden transition-[width] duration-200 ease-in-out"
         >
           <div style={{ width: rightWidth }} className="h-full">
-            <LibrarySidebar onClose={() => setRightOpen(false)} scopedId={scoped?.id ?? null} onScopeTutorial={setScoped} refreshKey={libraryRefreshKey} />
+            <LibrarySidebar onClose={() => setRightOpen(false)} libraryId={libraryId} scopedId={scoped?.id ?? null} onScopeTutorial={setScoped} refreshKey={libraryRefreshKey} />
           </div>
         </div>
       </div>
 
       {ingestOpen && (
-        <IngestModal onClose={() => { setIngestOpen(false); setLibraryRefreshKey(k => k + 1); }} />
+        <IngestModal libraryId={libraryId} onClose={() => { setIngestOpen(false); setLibraryRefreshKey(k => k + 1); }} />
       )}
     </div>
   );

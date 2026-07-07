@@ -64,15 +64,16 @@ class Gap:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _collect_poor_queries(session) -> dict[str, int]:
+def _collect_poor_queries(session, library_id: str) -> dict[str, int]:
     """
-    Return {query_text: frequency} for queries that were poorly served.
-    Frequency > 1 when the same query was asked multiple times.
+    Return {query_text: frequency} for queries that were poorly served within
+    ``library_id``. Frequency > 1 when the same query was asked multiple times.
     """
     from stepwise.models import QueryLogDB
 
     logs = (
         session.query(QueryLogDB)
+        .filter(QueryLogDB.library_id == library_id)
         .order_by(QueryLogDB.created_at.desc())
         .limit(MAX_RECENT)
         .all()
@@ -166,35 +167,36 @@ def _describe_gap(queries: list[str], total_weight: int, client, model: str) -> 
 
 # ── Cache ─────────────────────────────────────────────────────────────────────
 
-_cache: dict | None = None
-_cache_ts: float = 0.0
+# Cached per library: {library_id: (result, timestamp)}.
+_cache: dict[str, tuple[list[dict], float]] = {}
 CACHE_TTL = 3600.0  # 1 hour
 
 
-def detect_gaps(force: bool = False) -> list[dict]:
+def detect_gaps(force: bool = False, library_id: str | None = None) -> list[dict]:
     """
-    Run gap detection and return a list of gap dicts sorted by query_count.
+    Run gap detection for a library and return gap dicts sorted by query_count.
 
-    Results are cached in-memory for CACHE_TTL seconds. Pass force=True to
-    bypass the cache and recompute immediately.
+    Results are cached in-memory per library for CACHE_TTL seconds. Pass
+    force=True to bypass the cache and recompute immediately.
     """
-    global _cache, _cache_ts
+    from stepwise.config import settings
 
-    if not force and _cache is not None and (time.monotonic() - _cache_ts) < CACHE_TTL:
-        return _cache
+    library_id = library_id or settings.default_library_id
+
+    cached = _cache.get(library_id)
+    if not force and cached is not None and (time.monotonic() - cached[1]) < CACHE_TTL:
+        return cached[0]
 
     import anthropic
 
-    from stepwise.config import settings
     from stepwise.indexing.indexer import _get_text_model, get_db_session
 
     with get_db_session() as session:
-        freq_map = _collect_poor_queries(session)
+        freq_map = _collect_poor_queries(session, library_id)
 
     if not freq_map:
-        _cache = []
-        _cache_ts = time.monotonic()
-        return _cache
+        _cache[library_id] = ([], time.monotonic())
+        return []
 
     queries = list(freq_map.keys())
     weights = [freq_map[q] for q in queries]
@@ -204,9 +206,8 @@ def detect_gaps(force: bool = False) -> list[dict]:
 
     significant = [(qs, w) for qs, w in clusters if w >= MIN_WEIGHT]
     if not significant:
-        _cache = []
-        _cache_ts = time.monotonic()
-        return _cache
+        _cache[library_id] = ([], time.monotonic())
+        return []
 
     client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
     gaps: list[Gap] = []
@@ -230,6 +231,5 @@ def detect_gaps(force: bool = False) -> list[dict]:
         for g in gaps
     ]
 
-    _cache = result
-    _cache_ts = time.monotonic()
+    _cache[library_id] = (result, time.monotonic())
     return result
