@@ -235,6 +235,7 @@ stepwise query "how do I configure an API key?"
 | `POST` | `/watchers` · `POST /watchers/poll` | Manage & poll auto-ingestion sources |
 | `GET` | `/gaps?force=true` | Detect coverage gaps from query logs |
 | `GET` | `/admin/query-logs` · `/admin/stats` | Retrieval telemetry |
+| `GET` | `/admin/consistency` | SQLite↔Chroma vector drift report (see below) |
 | `GET` | `/jobs` · `/jobs/{id}` | Background ingestion job status (with `created_at` / `updated_at` / `completed_at`) |
 | `GET` | `/health` | Liveness — always cheap, no dependency checks |
 | `GET` | `/ready` | Readiness — verifies DB writability + Chroma reachability (no ML models); `503` when a dependency is down |
@@ -244,6 +245,22 @@ Full interactive schema at **`/docs`** when the API is running.
 Every ingest / query / watcher / gaps / admin / tutorial endpoint accepts a `library_id` (POST body field or `?library_id=` query param). It defaults to the built-in `local` library, so single-library setups need no changes. See **[Libraries (workspaces)](#libraries-workspaces)**.
 
 `/health` and `/ready` are the probe endpoints for an orchestrator (Docker healthcheck, Kubernetes liveness/readiness, Railway). Both are exempt from `API_KEY` auth. Use `/health` for liveness (does the process respond) and `/ready` for readiness (can it actually serve traffic) — `/ready` returns a per-check breakdown, e.g. `{"status":"ready","checks":{"db":"ok","chroma":"ok"}}`.
+
+### Vector consistency check
+
+SQLite is the source of truth for tutorials/steps; Chroma holds the step vectors and per-tutorial centroids used by the retrieval pre-filter. The consistency check reports any drift between the two stores:
+
+- **`tutorials_missing_vectors`** — tutorials whose steps have no vectors in Chroma
+- **`vectors_missing_sqlite`** — orphaned step vectors with no matching SQLite row
+- **`stale_centroids`** — centroids whose tutorial is gone (or has no backing step vectors)
+
+Run it from the CLI:
+
+```bash
+stepwise check
+```
+
+Exit code `0` and a green ✓ mean the stores agree; a non-zero exit lists every inconsistency. The same report is available as JSON at `GET /admin/consistency` (`{"ok": true, ...}` when clean).
 
 ---
 

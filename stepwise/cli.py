@@ -68,5 +68,29 @@ def query(
     console.print(table)
 
 
+@app.command()
+def check():
+    """Report SQLite↔Chroma vector drift (missing vectors, orphans, stale centroids)."""
+    from stepwise.indexing.indexer import check_vector_consistency
+
+    report = check_vector_consistency()
+    if report["ok"]:
+        console.print("[green]✓[/green] SQLite and Chroma are consistent.")
+        return
+
+    console.print("[bold red]Vector inconsistencies found:[/bold red]\n")
+    for tut in report["tutorials_missing_vectors"]:
+        console.print(
+            f"[yellow]missing vectors[/yellow] tutorial {tut['tutorial_id']} "
+            f"— {len(tut['missing_step_ids'])} step(s) not indexed"
+        )
+    for sid in report["vectors_missing_sqlite"]:
+        console.print(f"[yellow]orphan vector[/yellow] step {sid} has no SQLite row")
+    for cid in report["stale_centroids"]:
+        console.print(f"[yellow]stale centroid[/yellow] tutorial {cid}")
+
+    raise typer.Exit(code=1)
+
+
 if __name__ == "__main__":
     app()

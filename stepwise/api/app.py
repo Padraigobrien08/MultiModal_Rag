@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import uuid
@@ -16,6 +17,7 @@ from sqlalchemy import text
 from stepwise.api.middleware import APIKeyMiddleware, RequestIDMiddleware
 from stepwise.config import settings
 from stepwise.indexing import get_db_session
+from stepwise.indexing.indexer import check_vector_consistency, delete_tutorial_vectors
 from stepwise.ingestion.tasks import (
     run_drive_ingestion,
     run_image_ingestion,
@@ -34,6 +36,10 @@ from stepwise.models import (
 from stepwise.retrieval import query_steps, query_steps_stream
 
 DEFAULT_LIBRARY_ID = settings.default_library_id
+
+
+def _sanitize_for_log(value: str) -> str:
+    return value.replace("\r", "").replace("\n", "")
 
 # Public-input bounds
 MAX_QUERY_LEN = 2000
@@ -93,7 +99,6 @@ def _canonical_url(url: str) -> str:
 
 _cors_origins = settings.cors_origin_list()
 if _cors_origins == ["*"] and settings.api_key:
-    import logging
     logging.getLogger(__name__).warning(
         "CORS is set to '*' while an API key is configured — set CORS_ORIGINS to "
         "explicit frontend origin(s) for production."
@@ -285,22 +290,22 @@ def list_tutorials(library_id: str = Query(default=DEFAULT_LIBRARY_ID)) -> list:
 
 
 def _delete_tutorial_data(tutorial_id: str) -> None:
-    """Remove tutorial + steps from SQLite and vectors from ChromaDB."""
+    """Remove tutorial + steps from SQLite and all vectors (steps + centroid) from ChromaDB."""
     with get_db_session() as session:
         t = session.get(TutorialDB, tutorial_id)
         if not t:
             return
-        step_ids = [s.id for s in t.steps]
         session.delete(t)
         session.commit()
 
-    if step_ids:
-        try:
-            chroma = chromadb.PersistentClient(path=str(settings.chroma_path))
-            collection = chroma.get_or_create_collection("steps")
-            collection.delete(ids=step_ids)
-        except Exception:
-            pass  # ChromaDB delete is best-effort
+    try:
+        delete_tutorial_vectors(tutorial_id)
+    except Exception:
+        logging.getLogger(__name__).warning(
+            "ChromaDB vector cleanup failed for tutorial %s",
+            _sanitize_for_log(tutorial_id),
+            exc_info=True,
+        )
 
 
 @app.delete("/tutorials/{tutorial_id}", status_code=204)
@@ -668,6 +673,12 @@ def _run_reindex() -> None:
         )
 
     log.info("Reindex complete — %d tutorials", len(tutorial_data))
+
+
+@app.get("/admin/consistency")
+def get_vector_consistency() -> dict:
+    """Report SQLite↔Chroma drift: missing vectors, orphaned vectors, stale centroids."""
+    return check_vector_consistency()
 
 
 @app.get("/admin/query-logs")
