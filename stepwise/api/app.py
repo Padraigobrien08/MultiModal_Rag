@@ -37,6 +37,10 @@ from stepwise.retrieval import query_steps, query_steps_stream
 
 DEFAULT_LIBRARY_ID = settings.default_library_id
 
+
+def _sanitize_for_log(value: str) -> str:
+    return value.replace("\r", "").replace("\n", "")
+
 # Public-input bounds
 MAX_QUERY_LEN = 2000
 MAX_HISTORY_TURNS = 50
@@ -298,7 +302,9 @@ def _delete_tutorial_data(tutorial_id: str) -> None:
         delete_tutorial_vectors(tutorial_id)
     except Exception:
         logging.getLogger(__name__).warning(
-            "ChromaDB vector cleanup failed for tutorial %s", tutorial_id, exc_info=True
+            "ChromaDB vector cleanup failed for tutorial %s",
+            _sanitize_for_log(tutorial_id),
+            exc_info=True,
         )
 
 
