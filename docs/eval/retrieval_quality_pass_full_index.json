@@ -1,0 +1,815 @@
+{
+  "generated": "2026-07-06",
+  "mode": "full_index",
+  "description": "After retrieval-quality pass: CE relevance gate (MIN_CE_SCORE, CE_DROP_GAP).",
+  "methodology": "Pinned-HyDE A/B: HyDE hypothetical + candidate fetch computed once per query, old vs new post-processing applied to identical candidates so the delta reflects tuning, not HyDE variance.",
+  "config": {
+    "MIN_CE_SCORE": -6.5,
+    "CE_DROP_GAP": 7.0,
+    "MAX_DISTANCE": 1.4,
+    "FETCH_K": 15
+  },
+  "metrics": {
+    "answerable_retrieval": {
+      "total": 17,
+      "pass": 14,
+      "partial": 3,
+      "pass_rate": 82.4,
+      "hit_rate": 100.0
+    },
+    "no_answer_calibration": {
+      "total": 8,
+      "correct": 6,
+      "accuracy": 75.0
+    },
+    "overall_support_success": {
+      "total": 25,
+      "success": 20,
+      "success_rate": 80.0
+    },
+    "errors": 0,
+    "bleed_queries": 1
+  },
+  "scores": [
+    {
+      "id": "q01",
+      "query": "How do I find my API keys?",
+      "coverage": "full",
+      "expected_video_ids": [
+        "lqRxtGOUQ2o",
+        "1l4NMj-NTUE"
+      ],
+      "score": "PASS",
+      "retrieved": [
+        {
+          "video_id": "lqRxtGOUQ2o",
+          "step_id": "1564e4de-c9e1-4f71-b5f0-04fa8a6102cb",
+          "step_number": 2,
+          "distance": 0.9311,
+          "ce_score": 6.6434
+        },
+        {
+          "video_id": "1l4NMj-NTUE",
+          "step_id": "7dbb4dc3-c047-451a-8d0f-e2841a6bc107",
+          "step_number": 5,
+          "distance": 1.3047,
+          "ce_score": 5.2052
+        },
+        {
+          "video_id": "GUgxx6fMiR8",
+          "step_id": "e230f803-3ed9-4d40-a426-bb15229eb1dd",
+          "step_number": 22,
+          "distance": 1.2717,
+          "ce_score": 2.7516
+        }
+      ],
+      "expected_in_top_k": true,
+      "bleed_video_ids": [
+        "GUgxx6fMiR8"
+      ]
+    },
+    {
+      "id": "q02",
+      "query": "Where do I get my publishable and secret keys?",
+      "coverage": "full",
+      "expected_video_ids": [
+        "lqRxtGOUQ2o",
+        "1l4NMj-NTUE"
+      ],
+      "score": "PASS",
+      "retrieved": [
+        {
+          "video_id": "lqRxtGOUQ2o",
+          "step_id": "1564e4de-c9e1-4f71-b5f0-04fa8a6102cb",
+          "step_number": 2,
+          "distance": 0.8114,
+          "ce_score": 4.6478
+        },
+        {
+          "video_id": "1l4NMj-NTUE",
+          "step_id": "7dbb4dc3-c047-451a-8d0f-e2841a6bc107",
+          "step_number": 5,
+          "distance": 1.3674,
+          "ce_score": -0.4903
+        }
+      ],
+      "expected_in_top_k": true,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q03",
+      "query": "How do I set up a webhook endpoint?",
+      "coverage": "full",
+      "expected_video_ids": [
+        "1l4NMj-NTUE"
+      ],
+      "score": "PASS",
+      "retrieved": [
+        {
+          "video_id": "1l4NMj-NTUE",
+          "step_id": "ba0bdfe0-56e7-48f5-ab34-410881edc0a2",
+          "step_number": 26,
+          "distance": 1.3083,
+          "ce_score": 7.3037
+        }
+      ],
+      "expected_in_top_k": true,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q04",
+      "query": "My webhook events aren't arriving \u2014 how do I debug?",
+      "coverage": "full",
+      "expected_video_ids": [
+        "1l4NMj-NTUE"
+      ],
+      "score": "PASS",
+      "retrieved": [
+        {
+          "video_id": "1l4NMj-NTUE",
+          "step_id": "e8b35e55-d0b6-4402-b8b5-b1262a9bdf77",
+          "step_number": 19,
+          "distance": 1.2741,
+          "ce_score": 0.4027
+        },
+        {
+          "video_id": "1l4NMj-NTUE",
+          "step_id": "04db21ff-d87e-48b4-bb03-48fdbdfb031a",
+          "step_number": 22,
+          "distance": 1.1538,
+          "ce_score": -0.0395
+        },
+        {
+          "video_id": "1l4NMj-NTUE",
+          "step_id": "ba0bdfe0-56e7-48f5-ab34-410881edc0a2",
+          "step_number": 26,
+          "distance": 1.2976,
+          "ce_score": -2.1101
+        },
+        {
+          "video_id": "1l4NMj-NTUE",
+          "step_id": "2d834e08-dbfa-4df6-9f3f-cf457a3ffa4f",
+          "step_number": 12,
+          "distance": 1.3555,
+          "ce_score": -5.3603
+        },
+        {
+          "video_id": "1l4NMj-NTUE",
+          "step_id": "1018f6fd-ce70-46e0-b088-131cc50f3169",
+          "step_number": 11,
+          "distance": 1.3856,
+          "ce_score": -5.5081
+        }
+      ],
+      "expected_in_top_k": true,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q05",
+      "query": "How do I verify webhook signatures?",
+      "coverage": "full",
+      "expected_video_ids": [
+        "1l4NMj-NTUE"
+      ],
+      "score": "PASS",
+      "retrieved": [
+        {
+          "video_id": "1l4NMj-NTUE",
+          "step_id": "2d834e08-dbfa-4df6-9f3f-cf457a3ffa4f",
+          "step_number": 12,
+          "distance": 1.2899,
+          "ce_score": 6.3729
+        },
+        {
+          "video_id": "1l4NMj-NTUE",
+          "step_id": "b1420768-4a2d-4749-8843-a4c0bec1f2ec",
+          "step_number": 10,
+          "distance": 1.3839,
+          "ce_score": 5.629
+        },
+        {
+          "video_id": "1l4NMj-NTUE",
+          "step_id": "1018f6fd-ce70-46e0-b088-131cc50f3169",
+          "step_number": 11,
+          "distance": 1.2295,
+          "ce_score": 4.199
+        },
+        {
+          "video_id": "1l4NMj-NTUE",
+          "step_id": "82559241-9e5a-468c-ab60-aabe2751fb14",
+          "step_number": 28,
+          "distance": 1.3495,
+          "ce_score": 0.7377
+        }
+      ],
+      "expected_in_top_k": true,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q06",
+      "query": "How do I create a subscription plan?",
+      "coverage": "partial",
+      "expected_video_ids": [
+        "Q6-jmzYF55A"
+      ],
+      "score": "PASS",
+      "retrieved": [
+        {
+          "video_id": "Q6-jmzYF55A",
+          "step_id": "b679f378-96fc-48b2-a8e1-591c81fa56f8",
+          "step_number": 6,
+          "distance": 1.2832,
+          "ce_score": 4.61
+        },
+        {
+          "video_id": "Q6-jmzYF55A",
+          "step_id": "93809a72-3641-4ae9-90df-d55d66e189cf",
+          "step_number": 2,
+          "distance": 1.23,
+          "ce_score": 1.8279
+        },
+        {
+          "video_id": "4eN9by7m2eA",
+          "step_id": "c1de9991-b3e4-472c-93ed-dfe7c4a1b683",
+          "step_number": 8,
+          "distance": 1.2934,
+          "ce_score": 0.6737
+        }
+      ],
+      "expected_in_top_k": true,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q07",
+      "query": "How do I cancel a customer's subscription?",
+      "coverage": "none",
+      "expected_video_ids": [],
+      "score": "PASS",
+      "retrieved": [],
+      "expected_in_top_k": false,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q08",
+      "query": "How do I pause a subscription without cancelling it?",
+      "coverage": "none",
+      "expected_video_ids": [],
+      "score": "PASS",
+      "retrieved": [],
+      "expected_in_top_k": false,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q09",
+      "query": "How do I issue a refund to a customer?",
+      "coverage": "none",
+      "expected_video_ids": [],
+      "score": "PASS",
+      "retrieved": [],
+      "expected_in_top_k": false,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q10",
+      "query": "A customer was charged twice \u2014 what do I do?",
+      "coverage": "none",
+      "expected_video_ids": [],
+      "score": "PASS",
+      "retrieved": [],
+      "expected_in_top_k": false,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q11",
+      "query": "How do I test payments without real card details?",
+      "coverage": "partial",
+      "expected_video_ids": [
+        "lqRxtGOUQ2o"
+      ],
+      "score": "PASS",
+      "retrieved": [
+        {
+          "video_id": "lqRxtGOUQ2o",
+          "step_id": "db035dca-15a4-46c9-8c03-815a0b1fdf1d",
+          "step_number": 12,
+          "distance": 0.9074,
+          "ce_score": 5.414
+        },
+        {
+          "video_id": "1l4NMj-NTUE",
+          "step_id": "6c3d589c-9743-4f09-919a-2fcdbb4318a2",
+          "step_number": 21,
+          "distance": 0.9581,
+          "ce_score": 1.4728
+        },
+        {
+          "video_id": "lqRxtGOUQ2o",
+          "step_id": "c826b494-2928-45a3-8c03-9f09187887a2",
+          "step_number": 14,
+          "distance": 1.0719,
+          "ce_score": -1.5111
+        }
+      ],
+      "expected_in_top_k": true,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q12",
+      "query": "What test card numbers can I use?",
+      "coverage": "none",
+      "expected_video_ids": [],
+      "score": "MISS",
+      "retrieved": [
+        {
+          "video_id": "1l4NMj-NTUE",
+          "step_id": "6c3d589c-9743-4f09-919a-2fcdbb4318a2",
+          "step_number": 21,
+          "distance": 1.1521,
+          "ce_score": 3.9635
+        },
+        {
+          "video_id": "lqRxtGOUQ2o",
+          "step_id": "db035dca-15a4-46c9-8c03-815a0b1fdf1d",
+          "step_number": 12,
+          "distance": 1.1215,
+          "ce_score": 3.217
+        }
+      ],
+      "expected_in_top_k": false,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q13",
+      "query": "When will my payout arrive?",
+      "coverage": "full",
+      "expected_video_ids": [
+        "3v0ADH-xnrE"
+      ],
+      "score": "PASS",
+      "retrieved": [
+        {
+          "video_id": "3v0ADH-xnrE",
+          "step_id": "d710369a-066a-4f55-b3df-3ba535596e38",
+          "step_number": 9,
+          "distance": 1.2339,
+          "ce_score": 1.4783
+        },
+        {
+          "video_id": "3v0ADH-xnrE",
+          "step_id": "ed7e1d69-b95e-4ff4-b998-e83895c3373d",
+          "step_number": 10,
+          "distance": 1.1738,
+          "ce_score": -4.8353
+        }
+      ],
+      "expected_in_top_k": true,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q14",
+      "query": "How do I change my payout bank account?",
+      "coverage": "full",
+      "expected_video_ids": [
+        "3v0ADH-xnrE"
+      ],
+      "score": "PASS",
+      "retrieved": [
+        {
+          "video_id": "3v0ADH-xnrE",
+          "step_id": "ed7e1d69-b95e-4ff4-b998-e83895c3373d",
+          "step_number": 10,
+          "distance": 1.1361,
+          "ce_score": 5.7339
+        },
+        {
+          "video_id": "Q6-jmzYF55A",
+          "step_id": "d33461e1-d42d-44ea-924a-a6d5805ebd8c",
+          "step_number": 10,
+          "distance": 1.2404,
+          "ce_score": 2.0178
+        },
+        {
+          "video_id": "3v0ADH-xnrE",
+          "step_id": "d3d2cee7-1600-4d5f-8f36-3affa1915f7e",
+          "step_number": 7,
+          "distance": 1.2593,
+          "ce_score": -0.2696
+        },
+        {
+          "video_id": "4eN9by7m2eA",
+          "step_id": "493f65b1-f897-418e-966d-bedb552aec12",
+          "step_number": 19,
+          "distance": 1.3376,
+          "ce_score": -0.7779
+        }
+      ],
+      "expected_in_top_k": true,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q15",
+      "query": "How do I set up a payment link for my product?",
+      "coverage": "full",
+      "expected_video_ids": [
+        "Q6-jmzYF55A",
+        "4eN9by7m2eA"
+      ],
+      "score": "PASS",
+      "retrieved": [
+        {
+          "video_id": "4eN9by7m2eA",
+          "step_id": "c1de9991-b3e4-472c-93ed-dfe7c4a1b683",
+          "step_number": 8,
+          "distance": 1.2203,
+          "ce_score": 8.2495
+        },
+        {
+          "video_id": "Q6-jmzYF55A",
+          "step_id": "93809a72-3641-4ae9-90df-d55d66e189cf",
+          "step_number": 2,
+          "distance": 1.0238,
+          "ce_score": 7.8477
+        },
+        {
+          "video_id": "4eN9by7m2eA",
+          "step_id": "74fe3ca6-567a-4686-a793-ee9aec44cad2",
+          "step_number": 12,
+          "distance": 0.9043,
+          "ce_score": 7.0848
+        },
+        {
+          "video_id": "Q6-jmzYF55A",
+          "step_id": "537e08d8-ece2-48f5-b1f1-9cf248b2db40",
+          "step_number": 1,
+          "distance": 1.1344,
+          "ce_score": 5.6604
+        },
+        {
+          "video_id": "4eN9by7m2eA",
+          "step_id": "3a4fe2e7-6b9a-46a7-8d90-677424c48bc9",
+          "step_number": 13,
+          "distance": 1.0981,
+          "ce_score": 5.2707
+        }
+      ],
+      "expected_in_top_k": true,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q16",
+      "query": "Can I accept payments without a website?",
+      "coverage": "full",
+      "expected_video_ids": [
+        "Q6-jmzYF55A",
+        "4eN9by7m2eA"
+      ],
+      "score": "PASS",
+      "retrieved": [
+        {
+          "video_id": "4eN9by7m2eA",
+          "step_id": "b5a8538b-610d-4977-a13d-df06e9df6f11",
+          "step_number": 1,
+          "distance": 1.3187,
+          "ce_score": -2.7037
+        },
+        {
+          "video_id": "J62rD-pvzck",
+          "step_id": "e6a6d38e-2e7e-4aeb-8ce8-656212684d10",
+          "step_number": 2,
+          "distance": 1.2239,
+          "ce_score": -4.2198
+        },
+        {
+          "video_id": "4eN9by7m2eA",
+          "step_id": "3a4fe2e7-6b9a-46a7-8d90-677424c48bc9",
+          "step_number": 13,
+          "distance": 1.3269,
+          "ce_score": -4.4142
+        },
+        {
+          "video_id": "4eN9by7m2eA",
+          "step_id": "74fe3ca6-567a-4686-a793-ee9aec44cad2",
+          "step_number": 12,
+          "distance": 1.1418,
+          "ce_score": -5.9149
+        },
+        {
+          "video_id": "Q6-jmzYF55A",
+          "step_id": "f2706e72-911b-491b-910d-92351fb705dc",
+          "step_number": 9,
+          "distance": 1.2924,
+          "ce_score": -6.4231
+        }
+      ],
+      "expected_in_top_k": true,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q17",
+      "query": "How do I add a new team member to my Stripe account?",
+      "coverage": "none",
+      "expected_video_ids": [],
+      "score": "MISS",
+      "retrieved": [
+        {
+          "video_id": "3v0ADH-xnrE",
+          "step_id": "35f6cc14-af15-4949-9e57-8528482604e5",
+          "step_number": 1,
+          "distance": 1.0125,
+          "ce_score": 5.6072
+        },
+        {
+          "video_id": "J62rD-pvzck",
+          "step_id": "d4236c42-93cf-403d-b3d1-23153eec577d",
+          "step_number": 1,
+          "distance": 1.0152,
+          "ce_score": 5.4121
+        },
+        {
+          "video_id": "4eN9by7m2eA",
+          "step_id": "76f98264-4af6-4a69-b477-0f86862c794e",
+          "step_number": 3,
+          "distance": 1.0031,
+          "ce_score": 3.9808
+        },
+        {
+          "video_id": "J62rD-pvzck",
+          "step_id": "471c4c3f-c47c-401f-81e2-cb6f761fc07c",
+          "step_number": 8,
+          "distance": 1.1009,
+          "ce_score": 2.8419
+        },
+        {
+          "video_id": "ArD4oZDtL_0",
+          "step_id": "94a8f334-6c94-4e1e-8734-700fb64afc89",
+          "step_number": 7,
+          "distance": 1.0516,
+          "ce_score": 2.1326
+        }
+      ],
+      "expected_in_top_k": false,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q18",
+      "query": "How do I accept Apple Pay and Google Pay?",
+      "coverage": "partial",
+      "expected_video_ids": [
+        "J62rD-pvzck"
+      ],
+      "score": "PASS",
+      "retrieved": [
+        {
+          "video_id": "J62rD-pvzck",
+          "step_id": "eab56ebe-8035-4b75-b6f7-a1af787cd5ec",
+          "step_number": 5,
+          "distance": 1.1125,
+          "ce_score": 0.5881
+        },
+        {
+          "video_id": "J62rD-pvzck",
+          "step_id": "35bea229-a3ee-4172-a10a-43cefa29f7e5",
+          "step_number": 6,
+          "distance": 1.2709,
+          "ce_score": -1.1461
+        },
+        {
+          "video_id": "4eN9by7m2eA",
+          "step_id": "b5a8538b-610d-4977-a13d-df06e9df6f11",
+          "step_number": 1,
+          "distance": 1.3029,
+          "ce_score": -4.415
+        },
+        {
+          "video_id": "Q6-jmzYF55A",
+          "step_id": "93809a72-3641-4ae9-90df-d55d66e189cf",
+          "step_number": 2,
+          "distance": 1.2956,
+          "ce_score": -6.0421
+        }
+      ],
+      "expected_in_top_k": true,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q19",
+      "query": "How do I enable SEPA or BACS bank transfer payments?",
+      "coverage": "partial",
+      "expected_video_ids": [
+        "J62rD-pvzck"
+      ],
+      "score": "PASS",
+      "retrieved": [
+        {
+          "video_id": "J62rD-pvzck",
+          "step_id": "471c4c3f-c47c-401f-81e2-cb6f761fc07c",
+          "step_number": 8,
+          "distance": 1.3357,
+          "ce_score": -6.3156
+        }
+      ],
+      "expected_in_top_k": true,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q20",
+      "query": "A payment shows as 'pending' \u2014 is this normal?",
+      "coverage": "none",
+      "expected_video_ids": [],
+      "score": "PASS",
+      "retrieved": [],
+      "expected_in_top_k": false,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q21",
+      "query": "How do I integrate Stripe into my website?",
+      "coverage": "full",
+      "expected_video_ids": [
+        "lqRxtGOUQ2o",
+        "4eN9by7m2eA"
+      ],
+      "score": "PARTIAL",
+      "retrieved": [
+        {
+          "video_id": "J62rD-pvzck",
+          "step_id": "d4236c42-93cf-403d-b3d1-23153eec577d",
+          "step_number": 1,
+          "distance": 1.0766,
+          "ce_score": 4.7053
+        },
+        {
+          "video_id": "3v0ADH-xnrE",
+          "step_id": "35f6cc14-af15-4949-9e57-8528482604e5",
+          "step_number": 1,
+          "distance": 1.1233,
+          "ce_score": 3.9895
+        },
+        {
+          "video_id": "4eN9by7m2eA",
+          "step_id": "b5a8538b-610d-4977-a13d-df06e9df6f11",
+          "step_number": 1,
+          "distance": 1.1307,
+          "ce_score": 3.5324
+        },
+        {
+          "video_id": "lqRxtGOUQ2o",
+          "step_id": "08d391d3-2fda-41d3-9cd6-8922d7d1ca1c",
+          "step_number": 3,
+          "distance": 1.1463,
+          "ce_score": 3.5043
+        },
+        {
+          "video_id": "1l4NMj-NTUE",
+          "step_id": "1e24477d-2b21-48b8-bc74-fa3240fe92e1",
+          "step_number": 4,
+          "distance": 1.0965,
+          "ce_score": 2.6125
+        }
+      ],
+      "expected_in_top_k": true,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q22",
+      "query": "How do I create a product and price in Stripe?",
+      "coverage": "full",
+      "expected_video_ids": [
+        "4eN9by7m2eA",
+        "lqRxtGOUQ2o"
+      ],
+      "score": "PASS",
+      "retrieved": [
+        {
+          "video_id": "4eN9by7m2eA",
+          "step_id": "e4f6645f-21f7-4312-ad59-b8c7b7397563",
+          "step_number": 5,
+          "distance": 0.9045,
+          "ce_score": 5.3408
+        },
+        {
+          "video_id": "J62rD-pvzck",
+          "step_id": "d4236c42-93cf-403d-b3d1-23153eec577d",
+          "step_number": 1,
+          "distance": 0.9248,
+          "ce_score": 3.3495
+        },
+        {
+          "video_id": "ArD4oZDtL_0",
+          "step_id": "94a8f334-6c94-4e1e-8734-700fb64afc89",
+          "step_number": 7,
+          "distance": 0.946,
+          "ce_score": 2.7893
+        },
+        {
+          "video_id": "ArD4oZDtL_0",
+          "step_id": "a12f1046-11d5-42db-bfe2-3c3eefbc0904",
+          "step_number": 5,
+          "distance": 1.0259,
+          "ce_score": 2.4048
+        },
+        {
+          "video_id": "4eN9by7m2eA",
+          "step_id": "76f98264-4af6-4a69-b477-0f86862c794e",
+          "step_number": 3,
+          "distance": 0.9617,
+          "ce_score": 2.1998
+        }
+      ],
+      "expected_in_top_k": true,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q23",
+      "query": "My customer's card was declined \u2014 what should I tell them?",
+      "coverage": "none",
+      "expected_video_ids": [],
+      "score": "PASS",
+      "retrieved": [],
+      "expected_in_top_k": false,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q24",
+      "query": "How do I switch from test mode to live mode?",
+      "coverage": "partial",
+      "expected_video_ids": [
+        "4eN9by7m2eA"
+      ],
+      "score": "PARTIAL",
+      "retrieved": [
+        {
+          "video_id": "J62rD-pvzck",
+          "step_id": "6a8954f6-c3e5-45fa-bb08-0a7bf0f6b38c",
+          "step_number": 7,
+          "distance": 1.071,
+          "ce_score": 5.1493
+        },
+        {
+          "video_id": "lqRxtGOUQ2o",
+          "step_id": "1564e4de-c9e1-4f71-b5f0-04fa8a6102cb",
+          "step_number": 2,
+          "distance": 1.2047,
+          "ce_score": 2.2947
+        },
+        {
+          "video_id": "4eN9by7m2eA",
+          "step_id": "ceda0013-40c5-4748-a375-e277bce17208",
+          "step_number": 20,
+          "distance": 1.2521,
+          "ce_score": -0.3263
+        }
+      ],
+      "expected_in_top_k": true,
+      "bleed_video_ids": []
+    },
+    {
+      "id": "q25",
+      "query": "How do I download my Stripe invoice or receipt?",
+      "coverage": "partial",
+      "expected_video_ids": [
+        "4eN9by7m2eA"
+      ],
+      "score": "PARTIAL",
+      "retrieved": [
+        {
+          "video_id": "1l4NMj-NTUE",
+          "step_id": "414602ab-151b-4d82-bb9a-39eed64e8c8a",
+          "step_number": 13,
+          "distance": 1.0596,
+          "ce_score": 3.6557
+        },
+        {
+          "video_id": "J62rD-pvzck",
+          "step_id": "d4236c42-93cf-403d-b3d1-23153eec577d",
+          "step_number": 1,
+          "distance": 1.0939,
+          "ce_score": 2.7825
+        },
+        {
+          "video_id": "3v0ADH-xnrE",
+          "step_id": "35f6cc14-af15-4949-9e57-8528482604e5",
+          "step_number": 1,
+          "distance": 1.1388,
+          "ce_score": 2.4471
+        },
+        {
+          "video_id": "Q6-jmzYF55A",
+          "step_id": "537e08d8-ece2-48f5-b1f1-9cf248b2db40",
+          "step_number": 1,
+          "distance": 1.0978,
+          "ce_score": 2.3103
+        },
+        {
+          "video_id": "4eN9by7m2eA",
+          "step_id": "76f98264-4af6-4a69-b477-0f86862c794e",
+          "step_number": 3,
+          "distance": 1.1488,
+          "ce_score": 2.2103
+        }
+      ],
+      "expected_in_top_k": true,
+      "bleed_video_ids": []
+    }
+  ]
+}

@@ -1,0 +1,197 @@
+{
+  "meta": {
+    "date": "2026-07-06",
+    "api": "POST /query/sync",
+    "top_k": 3,
+    "corpus": "Stripe tutorial corpus (scripts/stripe_corpus.json), 11 tutorials / 317 steps indexed",
+    "scoring": "Each query's top-3 retrieved steps reviewed by hand against query intent (PASS/PARTIAL/MISS).",
+    "note": "The index also contained a few non-Stripe tutorials (Claude Code) and two test entries; this is realistic contamination and is reflected in the misses."
+  },
+  "scores": [
+    {
+      "id": "q01",
+      "query": "How do I find my API keys?",
+      "topic": "account_setup",
+      "score": "PASS",
+      "note": ""
+    },
+    {
+      "id": "q02",
+      "query": "Where do I get my publishable and secret keys?",
+      "topic": "account_setup",
+      "score": "PASS",
+      "note": ""
+    },
+    {
+      "id": "q03",
+      "query": "How do I set up a webhook endpoint?",
+      "topic": "webhooks",
+      "score": "PASS",
+      "note": ""
+    },
+    {
+      "id": "q04",
+      "query": "My webhook events aren't arriving \u2014 how do I debug?",
+      "topic": "webhooks",
+      "score": "PASS",
+      "note": ""
+    },
+    {
+      "id": "q05",
+      "query": "How do I verify webhook signatures?",
+      "topic": "webhooks",
+      "score": "PASS",
+      "note": ""
+    },
+    {
+      "id": "q06",
+      "query": "How do I create a subscription plan?",
+      "topic": "subscriptions",
+      "score": "PARTIAL",
+      "note": "Corpus has payment-link product/subscription steps, not 'create a subscription plan'; landed in the right area."
+    },
+    {
+      "id": "q07",
+      "query": "How do I cancel a customer's subscription?",
+      "topic": "subscriptions",
+      "score": "MISS",
+      "note": "A cancel-capable step exists (Webhooks step 29: update/pause/cancel) but was not ranked top-3 for this phrasing."
+    },
+    {
+      "id": "q08",
+      "query": "How do I pause a subscription without cancelling it?",
+      "topic": "subscriptions",
+      "score": "PASS",
+      "note": ""
+    },
+    {
+      "id": "q09",
+      "query": "How do I issue a refund to a customer?",
+      "topic": "payments",
+      "score": "MISS",
+      "note": "No refund content in the corpus; retrieval returned no steps."
+    },
+    {
+      "id": "q10",
+      "query": "A customer was charged twice \u2014 what do I do?",
+      "topic": "payments",
+      "score": "MISS",
+      "note": "No duplicate-charge/refund content in the corpus."
+    },
+    {
+      "id": "q11",
+      "query": "How do I test payments without real card details?",
+      "topic": "getting_started",
+      "score": "PASS",
+      "note": ""
+    },
+    {
+      "id": "q12",
+      "query": "What test card numbers can I use?",
+      "topic": "getting_started",
+      "score": "PASS",
+      "note": ""
+    },
+    {
+      "id": "q13",
+      "query": "When will my payout arrive?",
+      "topic": "payouts",
+      "score": "PARTIAL",
+      "note": "Right payouts video, but the corpus covers schedule config, not payout arrival timing."
+    },
+    {
+      "id": "q14",
+      "query": "How do I change my payout bank account?",
+      "topic": "payouts",
+      "score": "PARTIAL",
+      "note": "Right payouts video; corpus lacks a dedicated 'change bank account' step (only mentioned during activation)."
+    },
+    {
+      "id": "q15",
+      "query": "How do I set up a payment link for my product?",
+      "topic": "payment_links",
+      "score": "PASS",
+      "note": ""
+    },
+    {
+      "id": "q16",
+      "query": "Can I accept payments without a website?",
+      "topic": "payment_links",
+      "score": "PARTIAL",
+      "note": "Answerable via Payment Links/Terminal, but the top hit was a generic intro step, not the payment-link creation step."
+    },
+    {
+      "id": "q17",
+      "query": "How do I add a new team member to my Stripe account?",
+      "topic": "account_setup",
+      "score": "MISS",
+      "note": "No team-member/roles content in the corpus; returned sign-in steps."
+    },
+    {
+      "id": "q18",
+      "query": "How do I accept Apple Pay and Google Pay?",
+      "topic": "payment_methods",
+      "score": "PASS",
+      "note": ""
+    },
+    {
+      "id": "q19",
+      "query": "How do I enable SEPA or BACS bank transfer payments?",
+      "topic": "payment_methods",
+      "score": "PARTIAL",
+      "note": "Landed in the payment-methods video, but the corpus lists Cards/Wallets only \u2014 no SEPA/BACS."
+    },
+    {
+      "id": "q20",
+      "query": "A payment shows as 'pending' \u2014 is this normal?",
+      "topic": "payments",
+      "score": "PARTIAL",
+      "note": "Payments area, but the corpus has no explanation of 'pending' status."
+    },
+    {
+      "id": "q21",
+      "query": "How do I integrate Stripe into my website?",
+      "topic": "integration",
+      "score": "PASS",
+      "note": ""
+    },
+    {
+      "id": "q22",
+      "query": "How do I create a product and price in Stripe?",
+      "topic": "subscriptions",
+      "score": "PASS",
+      "note": ""
+    },
+    {
+      "id": "q23",
+      "query": "My customer's card was declined \u2014 what should I tell them?",
+      "topic": "payments",
+      "score": "MISS",
+      "note": "No card-decline handling in the corpus; retrieval returned no steps."
+    },
+    {
+      "id": "q24",
+      "query": "How do I switch from test mode to live mode?",
+      "topic": "getting_started",
+      "score": "PASS",
+      "note": ""
+    },
+    {
+      "id": "q25",
+      "query": "How do I download my Stripe invoice or receipt?",
+      "topic": "account_setup",
+      "score": "MISS",
+      "note": "No invoice/receipt-download content in the corpus."
+    }
+  ],
+  "summary": {
+    "total": 25,
+    "counted": 25,
+    "pass": 13,
+    "partial": 6,
+    "miss": 6,
+    "error": 0,
+    "pass_rate": 52.0,
+    "hit_rate": 76.0
+  }
+}

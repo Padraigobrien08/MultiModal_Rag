@@ -29,6 +29,22 @@ MAX_DISTANCE = 1.4
 CENTROID_THRESHOLD = 1.1
 TOP_TUTORIALS = 3
 
+# Cross-encoder relevance gate (applied after re-ranking). The cross-encoder
+# separates on-topic steps from cross-corpus bleed far better than L2 distance:
+# strongly-covered queries score +1..+8, foreign-corpus steps (e.g. an unrelated
+# Claude Code tutorial) score -9..-11. Two gates:
+#   MIN_CE_SCORE   absolute floor — if even the best step is below it, treat the
+#                  query as unanswerable and return no steps (no-answer behavior).
+#   CE_DROP_GAP    relative floor — drop tail steps scoring far below the best
+#                  kept step, so a strong top hit doesn't drag in weak bleed.
+# The floor sits in a genuinely narrow band: the weakest legitimately-covered
+# queries (e.g. "SEPA/BACS", a niche topic in a generic payment-methods video)
+# bottom out around CE -6.3, while the strongest uncovered queries reach ~-7.0.
+# -6.5 threads that gap on the eval, but the margin is thin — the unified
+# no-answer synthesis prompt is the real backstop. See docs/evaluation.md.
+MIN_CE_SCORE = -6.5
+CE_DROP_GAP = 7.0
+
 
 # ── Lazy-loaded models ────────────────────────────────────────────────────────
 
@@ -123,11 +139,17 @@ def _chromadb_lookup(
     tutorial_id: str | None,
     top_k: int,
     history: list[dict],
+    allowed_tutorial_ids: list[str] | None = None,
 ) -> tuple[list[str], list[dict], list[float], dict]:
     """Return (docs, metas, distances, timing_meta).
 
-    Pipeline: HyDE → pre-filter → fetch → cross-encode → dedup.
+    Pipeline: HyDE → pre-filter → fetch → cross-encode → relevance gate → dedup.
     All retrieval is confined to ``library_id``.
+
+    ``allowed_tutorial_ids`` restricts the search to a fixed set of tutorials
+    (clean-corpus mode, used by the eval harness to avoid cross-corpus bleed).
+    It bypasses the centroid pre-filter and cannot be combined with a pinned
+    ``tutorial_id``.
     """
     t0 = time.monotonic()
 
@@ -145,6 +167,10 @@ def _chromadb_lookup(
     tutorial_ids_searched = None
     if tutorial_id:
         where = {"$and": [lib_clause, {"tutorial_id": {"$eq": tutorial_id}}]}
+    elif allowed_tutorial_ids is not None:
+        # Clean-corpus mode: search only the intended corpus, skip the pre-filter.
+        tutorial_ids_searched = list(allowed_tutorial_ids)
+        where = {"$and": [lib_clause, {"tutorial_id": {"$in": allowed_tutorial_ids}}]}
     else:
         relevant_ids = _relevant_tutorial_ids(
             query_embedding, library_id, exclude_id=tutorial_id
@@ -188,20 +214,28 @@ def _chromadb_lookup(
     if not triples:
         return [], [], [], timing
 
-    # Cross-encoder re-rank — capture scores for logging
-    if len(triples) > 1:
-        try:
-            ce = _get_cross_encoder()
-            pairs = [(query, doc) for doc, _, _ in triples]
-            scores = ce.predict(pairs).tolist()
-            timing["ce_scores"] = {
-                m["step_id"]: round(float(s), 4)
-                for (_, m, _), s in zip(triples, scores)
-            }
-            ranked = sorted(zip(triples, scores), key=lambda x: x[1], reverse=True)
-            triples = [t for t, _ in ranked]
-        except Exception:
-            log.warning("Cross-encoder re-ranking failed, falling back to distance order")
+    # Cross-encoder re-rank + relevance gate — capture scores for logging.
+    # Runs for a single candidate too, so the no-answer floor can reject a lone
+    # weak match instead of always surfacing it.
+    try:
+        ce = _get_cross_encoder()
+        pairs = [(query, doc) for doc, _, _ in triples]
+        scores = ce.predict(pairs).tolist()
+        timing["ce_scores"] = {
+            m["step_id"]: round(float(s), 4)
+            for (_, m, _), s in zip(triples, scores)
+        }
+        ranked = sorted(zip(triples, scores), key=lambda x: x[1], reverse=True)
+
+        top_ce = ranked[0][1]
+        if top_ce < MIN_CE_SCORE:
+            # Best candidate is below the absolute floor — nothing here answers
+            # the query. Return no steps so the caller can say so.
+            return [], [], [], timing
+        keep_floor = max(MIN_CE_SCORE, top_ce - CE_DROP_GAP)
+        triples = [t for t, s in ranked if s >= keep_floor]
+    except Exception:
+        log.warning("Cross-encoder re-ranking failed, falling back to distance order")
 
     if tutorial_id:
         triples.sort(key=lambda t: t[1].get("step_number", 0))
@@ -246,7 +280,11 @@ def _fetch_tutorial_info(metas: list[dict]) -> dict[str, dict]:
 
 
 def _build_steps_out(
-    docs: list[str], metas: list[dict], tutorial_info: dict[str, dict]
+    docs: list[str],
+    metas: list[dict],
+    tutorial_info: dict[str, dict],
+    distances: list[float],
+    ce_scores: dict[str, float],
 ) -> list[dict]:
     return [
         {
@@ -256,9 +294,11 @@ def _build_steps_out(
             "timestamp_start": m.get("timestamp_start"),
             "visual_reference": m.get("visual_reference") or None,
             "text": doc,
+            "distance": round(float(dist), 4),
+            "ce_score": ce_scores.get(m["step_id"]),
             **tutorial_info.get(m["tutorial_id"], {}),
         }
-        for doc, m in zip(docs, metas)
+        for doc, m, dist in zip(docs, metas, distances)
     ]
 
 
@@ -342,7 +382,7 @@ def query_steps_stream(
         return
 
     tutorial_info = _fetch_tutorial_info(metas)
-    steps_out = _build_steps_out(docs, metas, tutorial_info)
+    steps_out = _build_steps_out(docs, metas, tutorial_info, distances, timing.get("ce_scores", {}))
     yield f"data: {json.dumps({'type': 'steps', 'steps': steps_out})}\n\n"
 
     context = "\n".join(
@@ -395,7 +435,7 @@ def query_steps(
         return {"answer": "No relevant steps found.", "steps": []}
 
     tutorial_info = _fetch_tutorial_info(metas)
-    steps_out = _build_steps_out(docs, metas, tutorial_info)
+    steps_out = _build_steps_out(docs, metas, tutorial_info, distances, timing.get("ce_scores", {}))
     context = "\n".join(
         f"Step {m['step_number']} [{m.get('timestamp_start', 0):.0f}s]: {doc}"
         for doc, m in zip(docs, metas)
@@ -407,7 +447,8 @@ def query_steps(
         max_tokens=300,
         system=(
             "You are a tutorial assistant. Answer the user's question in 1-3 sentences "
-            "using ONLY the provided context steps. Be direct."
+            "using ONLY the provided context steps. Be direct. "
+            "If the steps don't answer the question, say so clearly."
         ),
         messages=messages,
     )
