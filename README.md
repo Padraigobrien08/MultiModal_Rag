@@ -53,7 +53,7 @@ Support and onboarding knowledge is trapped in **video**. A 30-minute screencast
 | 🔁 **Auto-ingestion** | Watch a YouTube channel, Drive folder, or Notion database. New content is detected and ingested automatically — reactive becomes proactive. |
 | 🔍 **Gap detection** | Clusters queries the library *couldn't* answer well, names each gap with Claude, and suggests exactly what tutorial to record next. |
 | 💸 **Cost-engineered** | Haiku for high-volume extraction, scene-change frame dedup, and prompt caching cut the expensive ingestion path by a large margin — without dropping the visual modality. |
-| 🎫 **Ships where work happens** | A Zendesk sidebar app surfaces relevant steps on the active ticket and inserts a cited, timestamped link with one click. |
+| 🎫 **Zendesk sidebar prototype** | A Zendesk App Framework sidebar (manifest + iframe into the Stepwise UI) surfaces relevant steps on the active ticket and inserts a cited, timestamped link into the reply with one click. |
 
 ---
 
@@ -391,15 +391,15 @@ docs/               HyDE explainer
 
 ## Evaluation
 
-A 25-query retrieval harness ([`scripts/run_eval.py`](scripts/run_eval.py)) replays realistic support questions against the tutorial corpus and scores each result against ground-truth targets. It reports **three separate metrics** rather than one combined number, because a no-answer win on an uncovered query is not the same as retrieving the right step:
+A 25-query harness ([`scripts/run_eval.py`](scripts/run_eval.py)) replays realistic Stripe support questions against the tutorial corpus and scores each result against ground-truth targets. It reports **separate metrics** rather than one blended number — a no-answer win on an uncovered query is not the same as retrieving the right step. The rows below come from **two different runs** (a live full-index run and a pinned A/B benchmark), so read them as such:
 
-1. **Answerable retrieval pass rate** *(the headline)* — **82%** on covered queries.
-2. **No-answer calibration** — uncovered queries correctly returning no steps (**75%**, up from 12% before the retrieval-quality pass).
-3. **Overall support success** — strict PASS across all queries.
+| Run · metric | Scored over | Result |
+|---|---|---|
+| **Full index · strict pass** *(lead number)* | all 25 queries | **52%** (13/25) · 76% incl. partial |
+| A/B benchmark · answerable pass rate | 17 *covered* queries | 82% (14/17) |
+| A/B benchmark · no-answer calibration | 8 *uncovered* queries | 75% (up from 12%) |
 
-Clean-corpus mode restricts search to the intended corpus to isolate ranking from cross-corpus bleed. Full details, before/after, and committed benchmarks in [docs/evaluation.md](docs/evaluation.md).
-
-**Measured (2026-07-06, 11-tutorial Stripe corpus):** **52% pass rate** (13/25) · **76% hit rate** (pass + partial) — below the 70% pass target. The gap is corpus coverage, not ranking: webhooks, getting-started, and integration score 100%, while misses cluster on questions the tutorials don't cover (refunds, disputes, payout timing).
+Strict pass (2026-07-06, 11-tutorial index) sits below the 70% target, and the gap is **corpus coverage, not ranking**: webhooks, getting-started, and integration score 100%, while misses cluster on topics the tutorials don't cover (refunds, disputes, payout timing). The A/B benchmark pins the HyDE hypothetical and candidate set, then swaps only post-processing, so its delta reflects the retrieval-quality tuning rather than run-to-run variance.
 
 ```bash
 python scripts/run_eval.py --self-check              # offline smoke check

@@ -40,7 +40,7 @@ from tutorials outside the intended corpus).
 
 ## Clean-corpus vs full-index mode, and why bleed matters
 
-The index holds 10 tutorials but only 7 are the intended Stripe corpus. The rest
+The index holds 11 tutorials but only 7 are the intended Stripe corpus. The rest
 — a 182-step and a 24-step *Claude Code* tutorial, a test-image tutorial, and an
 empty "test" drive tutorial — are **cross-corpus bleed**: unrelated content that
 can surface in Stripe answers.

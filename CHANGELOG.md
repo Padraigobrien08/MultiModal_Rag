@@ -7,8 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-07-07
+
 ### Added
 
+- Multimodal ingestion of YouTube videos, Google Drive recordings, Notion
+  pages/databases, and screenshots.
+- Claude-based step structuring (Haiku extraction, Sonnet consolidation) with
+  trivial-step filtering and deduplication.
+- Fused text + CLIP image embeddings indexed in ChromaDB, with SQLite/SQLAlchemy
+  for relational data.
+- HyDE retrieval with a cross-encoder re-ranking stage and streamed answer
+  synthesis over SSE.
+- Auto-ingestion watchers for YouTube channels, Drive folders, and Notion
+  databases, plus a pollable endpoint.
+- Query-log gap detection that clusters unanswered questions and suggests
+  tutorials to record.
+- FastAPI backend, Next.js dashboard, and a Zendesk sidebar prototype.
+- Retrieval evaluation harness (`scripts/run_eval.py`).
+- Libraries (workspaces) for corpus isolation: `GET`/`POST /libraries`, and a
+  `library_id` accepted by every ingest/query/watcher/gaps/admin/tutorial
+  endpoint (defaults to the built-in `local` library, so single-library setups
+  are unchanged). Retrieval — both the tutorial pre-filter and the step search —
+  is confined to the active library, and a **Workspace** selector in the web
+  header switches it. Existing installs auto-migrate: the SQLite schema backfills
+  rows into `local` and a one-time, metadata-only pass tags pre-existing Chroma
+  vectors, with no re-embedding.
+- Ingestion job observability: a job-detail view exposing source metadata,
+  `started_at`, a `retryable` flag, and an `events` log of each pipeline stage;
+  `POST /jobs/{id}/retry` (re-run a failed/cancelled YouTube job) and
+  `POST /jobs/{id}/cancel` (pending jobs stop immediately, running jobs stop
+  cooperatively at the next stage boundary); a web job-detail page; and
+  friendlier, actionable ingestion error messages.
 - Production operations polish: a `/ready` readiness probe that checks DB
   writability and Chroma reachability without loading ML models (`/health`
   stays a bare liveness check); `updated_at`/`completed_at` timestamps on
@@ -72,25 +102,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `GET /admin/consistency` endpoint that report SQLite↔Chroma drift.
 - Cleaned the lint/build verification baseline (ruff, ESLint, Next build) with
   no changes to application behavior.
-
-## [0.1.0]
-
-### Added
-
-- Multimodal ingestion of YouTube videos, Google Drive recordings, Notion
-  pages/databases, and screenshots.
-- Claude-based step structuring (Haiku extraction, Sonnet consolidation) with
-  trivial-step filtering and deduplication.
-- Fused text + CLIP image embeddings indexed in ChromaDB, with SQLite/SQLAlchemy
-  for relational data.
-- HyDE retrieval with a cross-encoder re-ranking stage and streamed answer
-  synthesis over SSE.
-- Auto-ingestion watchers for YouTube channels, Drive folders, and Notion
-  databases, plus a pollable endpoint.
-- Query-log gap detection that clusters unanswered questions and suggests
-  tutorials to record.
-- FastAPI backend, Next.js dashboard, and a Zendesk sidebar integration.
-- Retrieval evaluation harness (`scripts/run_eval.py`).
 
 [Unreleased]: https://github.com/Padraigobrien08/Stepwise/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/Padraigobrien08/Stepwise/releases/tag/v0.1.0
